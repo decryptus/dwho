@@ -142,7 +142,7 @@ class DWhoModuleBase(object):
 
             if value.get('static'):
                 cmd_args['static']  = True
-                cmd_args['op']      = CMD_R
+                cmd_args['op']      = 'GET'
 
                 if not value.get('root'):
                     LOG.error("Missing root for static route")
