@@ -48,14 +48,25 @@ def stop(signum, stack_frame):
     for thread in DWHO_THREADS:
         thread()
 
+def get_server_id(conf):
+    server_id = getfqdn()
+
+    if 'general' in conf \
+       and conf['general'].get('server_id'):
+        server_id = conf['general']['server_id']
+
+    if not network.valid_domain(server_id):
+        raise DWhoConfigurationError("Invalid server_id: %r" % server_id)
+
+    return server_id
+
 def parse_conf(conf):
     global _INOTIFY
 
-    if not conf['general'].get('server_id'):
-        conf['general']['server_id'] = getfqdn()
+    if 'general' not in conf:
+        raise DWhoConfigurationError("Missing 'general' section in configuration")
 
-    if not network.valid_domain(conf['general']['server_id']):
-        raise DWhoConfigurationError('Invalid server_id: %r', conf['general']['server_id'])
+    conf['general']['server_id'] = get_server_id(conf)
 
     if not conf['general'].get('max_body_size'):
         conf['general']['max_body_size'] = MAX_BODY_SIZE
