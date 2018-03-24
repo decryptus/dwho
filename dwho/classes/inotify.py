@@ -255,7 +255,7 @@ class DWhoInotify(Thread):
                 else:
                     self.cfg_paths[wpath] = cfg_path
         except pyinotify.WatchManagerError, e:
-            LOG.exception("Unable to monitor. (path: %r, reason: %r)", path, e)
+            LOG.exception("Unable to monitor. (path: %r, reason: %r)", cfg_path.path, e)
         finally:
             wdd = None
 
