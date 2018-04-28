@@ -36,6 +36,7 @@ LOG             = logging.getLogger('dwho.config')
 
 MAX_BODY_SIZE   = 8388608
 MAX_WORKERS     = 1
+MAX_REQUESTS    = 0
 SUBDIR_LEVELS   = 0
 SUBDIR_CHARS    = "abcdef0123456789"
 
@@ -73,6 +74,9 @@ def parse_conf(conf):
 
     if not conf['general'].get('max_workers'):
         conf['general']['max_workers'] = MAX_WORKERS
+
+    if not conf['general'].get('max_requests'):
+        conf['general']['max_requests'] = MAX_REQUESTS
 
     if not conf['general'].has_key('auth_basic_file'):
         conf['general']['auth_basic'] = None
@@ -164,6 +168,7 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     setattr(options, 'auth_basic_file', conf['general']['auth_basic_file'])
     setattr(options, 'max_body_size', conf['general']['max_body_size'])
     setattr(options, 'max_workers', conf['general']['max_workers'])
+    setattr(options, 'max_requests', conf['general']['max_requests'])
 
     setattr(options, 'configuration', conf)
 
