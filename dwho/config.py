@@ -30,6 +30,7 @@ from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
 from logging.handlers import WatchedFileHandler
 from sonicprobe.libs import keystore, network
+from sonicprobe.libs.http_json_server import get_default_options
 from socket import getfqdn
 
 LOG             = logging.getLogger('dwho.config')
@@ -37,6 +38,7 @@ LOG             = logging.getLogger('dwho.config')
 MAX_BODY_SIZE   = 8388608
 MAX_WORKERS     = 1
 MAX_REQUESTS    = 0
+MAX_LIFE_TIME   = 0
 SUBDIR_LEVELS   = 0
 SUBDIR_CHARS    = "abcdef0123456789"
 
@@ -77,6 +79,9 @@ def parse_conf(conf):
 
     if not conf['general'].get('max_requests'):
         conf['general']['max_requests'] = MAX_REQUESTS
+
+    if not conf['general'].get('max_life_time'):
+        conf['general']['max_life_time'] = MAX_LIFE_TIME
 
     if not conf['general'].has_key('auth_basic_file'):
         conf['general']['auth_basic'] = None
@@ -158,17 +163,10 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     if not options or not isinstance(options, object):
         return conf
 
-    if not getattr(options, 'listen_addr', None):
-        setattr(options, 'listen_addr', conf['general']['listen_addr'])
-
-    if not getattr(options, 'listen_port', None):
-        setattr(options, 'listen_port', conf['general']['listen_port'])
-
-    setattr(options, 'auth_basic', conf['general']['auth_basic'])
-    setattr(options, 'auth_basic_file', conf['general']['auth_basic_file'])
-    setattr(options, 'max_body_size', conf['general']['max_body_size'])
-    setattr(options, 'max_workers', conf['general']['max_workers'])
-    setattr(options, 'max_requests', conf['general']['max_requests'])
+    for def_option in get_default_options().iterkeys():
+        if getattr(options, def_option, None) is None \
+           and def_option in conf['general']:
+            setattr(options, def_option, conf['general'][def_option])
 
     setattr(options, 'configuration', conf)
 
