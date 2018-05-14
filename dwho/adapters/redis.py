@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 __author__  = "Adrien DELLE CAVE <adc@doowan.net>"
 __license__ = """
-    Copyright (C) 2016  doowan
+    Copyright (C) 2016-2018  doowan
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

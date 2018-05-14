@@ -3,7 +3,7 @@
 
 __author__  = "Adrien DELLE CAVE <adc@doowan.net>"
 __license__ = """
-    Copyright (C) 2017  doowan
+    Copyright (C) 2017-2018  doowan
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ import Queue
 
 from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
 from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
+from sonicprobe import helpers
 from sonicprobe.libs.workerpool import WorkerPool
 from threading import Thread
 
@@ -153,6 +154,9 @@ class DWhoInotifyConfig(object):
                         continue
                     if INOPLUGS.has_key(plugin):
                         plugins.append(INOPLUGS[plugin])
+
+            if not os.path.exists(path):
+                helpers.make_dirs(path)
 
             notifier.add(DWhoInotifyCfgPath(path,
                                             value['event_masks'],
