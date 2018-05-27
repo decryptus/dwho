@@ -145,8 +145,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return ["%s.%s" % (cls.TABLE_NAME, c) for c in columns]
 
     def get(self, to_dict = False, order = None, columns = None, **conditions):
-        db          = self.connect()
-        db['conn'].commit()
+        db = self.connect()
 
         if not columns:
             columns = self.COLUMNS
@@ -183,8 +182,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return r
 
     def get_count(self, column = None, **conditions):
-        db          = self.connect()
-        db['conn'].commit()
+        db = self.connect()
 
         if not column:
             column = '*'
@@ -209,8 +207,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return res[0]
 
     def get_all(self, to_dict = False, order = None, limit = None, offset = None, columns = None, **conditions):
-        db          = self.connect()
-        db['conn'].commit()
+        db = self.connect()
 
         if not columns:
             columns = self.COLUMNS
@@ -256,8 +253,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return r
 
     def search(self, scolumns, svalue, to_dict = False, order = None, limit = None, offset = None, columns = None, **conditions):
-        db          = self.connect()
-        db['conn'].commit()
+        db = self.connect()
 
         if not columns:
             columns = self.COLUMNS
@@ -306,8 +302,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return r
 
     def exists(self, **conditions):
-        db          = self.connect()
-        db['conn'].commit()
+        db = self.connect()
 
         query       = "SELECT 1 FROM " + db['cursor'].escape(self.TABLE_NAME)
         cond_values = None

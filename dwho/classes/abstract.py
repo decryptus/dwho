@@ -21,6 +21,7 @@ __license__ = """
 """
 
 import abc
+import threading
 
 from sonicprobe.libs import anysql
 
@@ -30,7 +31,23 @@ class DWhoAbstractDB(object):
 
     def __init__(self):
         self.config = None
-        self.db     = {}
+        self._db    = {}
+
+    @property
+    def db(self):
+        thread_id = threading._get_ident()
+        if thread_id not in self._db:
+            self._db[thread_id] = {}
+
+        return self._db[thread_id]
+
+    @db.setter
+    def db(self, value):
+        thread_id = threading._get_ident()
+        if thread_id not in self._db:
+            self._db[thread_id] = {}
+
+        self._db[thread_id] = value
 
     def db_connect(self, name):
         if not self.db:
@@ -99,4 +116,3 @@ class DWhoAbstractDB(object):
         self.db[name]['conn']   = None
 
         return self
-
