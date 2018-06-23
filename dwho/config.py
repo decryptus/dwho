@@ -29,6 +29,7 @@ from dwho.classes.inoplugs import INOPLUGS
 from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
 from logging.handlers import WatchedFileHandler
+from sonicprobe.helpers import section_from_yaml_file
 from sonicprobe.libs import keystore, network
 from sonicprobe.libs.http_json_server import get_default_options
 from socket import getfqdn
@@ -171,6 +172,12 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     setattr(options, 'configuration', conf)
 
     return options
+
+def load_credentials(credentials, config_dir = None):
+    if isinstance(credentials, basestring):
+        return section_from_yaml_file(credentials, config_dir = config_dir)
+
+    return credentials
 
 def start_plugins():
     for name, plugin in PLUGINS.iteritems():
