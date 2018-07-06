@@ -22,6 +22,7 @@ __license__ = """
 
 import abc
 import logging
+import os
 
 from dwho.classes.abstract import DWhoAbstractDB
 from socket import getfqdn
@@ -138,6 +139,7 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
+        self.cfg_path = None
         DWhoInoPlugBase.__init__(self)
         DWhoInotifyEventBase.__init__(self)
 
@@ -148,6 +150,25 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
         return self
 
     @abc.abstractmethod
-    def __call__(self, event, filepath):
+    def run(self, cfg_path, event, filepath):
         """Do the action."""
-        return
+
+    def realdstpath(self, event, filepath, prefix = None):
+        if not self.cfg_path \
+           or self.cfg_path.path not in self.config['inotify']['paths']:
+            return filepath
+
+        r   = filepath
+        cfg = self.config['inotify']['paths'][self.cfg_path.path]
+
+        if cfg.get('dst') and filepath.startswith(self.cfg_path.path):
+            r = os.path.join(cfg['dst'], filepath[len(self.cfg_path.path):])
+
+        if not prefix:
+            return r
+
+        return os.path.join(os.path.sep, prefix, r.lstrip(os.path.sep))
+
+    def __call__(self, cfg_path, event, filepath):
+        self.cfg_path = cfg_path
+        return self.run(cfg_path, event, filepath)

@@ -41,6 +41,19 @@ MODE_REM        = 'MODE_REM'
 
 MAX_WORKERS     = 5
 
+ALL_EVENTS      = ('access',
+                   'attrib',
+                   'create',
+                   'close_write',
+                   'close_nowrite',
+                   'delete',
+                   'delete_self',
+                   'modify',
+                   'move_self',
+                   'moved_from',
+                   'moved_to',
+                   'open')
+
 DEFAULT_CONFIG  = {'plugins':   dict(zip(INOPLUGS.keys(),
                                          [False] * len(INOPLUGS.keys()))),
                    'events':    ['create',
@@ -134,7 +147,7 @@ class DWhoInotifyConfig(object):
 
             if value['exclude_files']:
                 for x in value['exclude_files']:
-                    pattern = load_patterns_from_file(x)
+                    pattern = helpers.load_patterns_from_file(x)
                     if not pattern:
                         raise DWhoConfigurationError("Unable to load exclude patterns from %r. (path: %r)"
                                                      % (x, path))
@@ -167,7 +180,7 @@ class DWhoInotifyConfig(object):
 
     @staticmethod
     def valid_event(event):
-        return event in DEFAULT_CONFIG['events']
+        return event in ALL_EVENTS
 
 
 class DWhoInotify(Thread):
