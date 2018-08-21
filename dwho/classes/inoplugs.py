@@ -162,7 +162,7 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
         cfg = self.config['inotify']['paths'][self.cfg_path.path]
 
         if cfg.get('dst') and filepath.startswith(self.cfg_path.path):
-            r = os.path.join(cfg['dst'], filepath[len(self.cfg_path.path):])
+            r = os.path.join(cfg['dst'], filepath[len(self.cfg_path.path):].lstrip(os.path.sep))
 
         if not prefix:
             return r
