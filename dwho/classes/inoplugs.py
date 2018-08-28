@@ -82,26 +82,27 @@ class DWhoInoPlugBase(object):
 
         self.initialized    = True
         self.config         = config
+        self.plugconf       = None
 
         if 'inotify' not in config \
            or 'plugins' not in config['inotify'] \
            or self.PLUGIN_NAME not in config['inotify']['plugins']:
             return self
 
-        ref_plugin          = config['inotify']['plugins'][self.PLUGIN_NAME]
+        self.plugconf       = config['inotify']['plugins'][self.PLUGIN_NAME]
 
-        if isinstance(ref_plugin, bool):
-            self.enabled    = ref_plugin
+        if isinstance(self.plugconf, bool):
+            self.enabled    = self.plugconf
             return self
-        elif not isinstance(ref_plugin, dict):
+        elif not isinstance(self.plugconf, dict):
             self.enabled    = False
             return self
 
-        if 'autostart' in ref_plugin:
-            self.autostart  = bool(ref_plugin['autostart'])
+        if 'autostart' in self.plugconf:
+            self.autostart  = bool(self.plugconf['autostart'])
 
-        if 'enabled' in ref_plugin:
-            self.enabled    = bool(ref_plugin['enabled'])
+        if 'enabled' in self.plugconf:
+            self.enabled    = bool(self.plugconf['enabled'])
 
         return self
 

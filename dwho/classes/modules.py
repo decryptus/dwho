@@ -88,6 +88,7 @@ class DWhoModuleBase(object):
 
         self.initialized = True
         self.config      = config
+        self.modconf     = None
 
         ref_general      = config['general']
         routes_list      = []
@@ -100,16 +101,16 @@ class DWhoModuleBase(object):
 
         if config.has_key('modules') \
            and config['modules'].has_key(self.MODULE_NAME):
-            ref_module      = config['modules'][self.MODULE_NAME]
+            self.modconf = config['modules'][self.MODULE_NAME]
 
-            if ref_module.has_key('charset'):
-                self.set_charset(ref_module['charset'])
+            if self.modconf.has_key('charset'):
+                self.set_charset(self.modconf['charset'])
 
-            if ref_module.has_key('content_type'):
-                self.set_content_type(ref_module['content_type'])
+            if self.modconf.has_key('content_type'):
+                self.set_content_type(self.modconf['content_type'])
 
-            if ref_module.has_key('routes') and isinstance(ref_module['routes'], dict):
-                routes_list.append(ref_module['routes'])
+            if self.modconf.has_key('routes') and isinstance(self.modconf['routes'], dict):
+                routes_list.append(self.modconf['routes'])
 
         for routes in routes_list:
             self._register_commands(routes)
@@ -202,23 +203,20 @@ class DWhoModuleWebBase(DWhoModuleBase):
 
         web_directories = config['general']['web_directories']
 
-        if config.has_key('modules') \
-           and config['modules'].has_key(self.MODULE_NAME):
-            ref_module      = config['modules'][self.MODULE_NAME]
-
-            if ref_module.has_key('web_directories'):
-                if isinstance(ref_module['web_directories'], basestring):
-                    ref_module['web_directories'] = [ref_module['web_directories']]
-                elif not isinstance(ref_module['web_directories'], list):
+        if self.modconf:
+            if self.modconf.has_key('web_directories'):
+                if isinstance(self.modconf['web_directories'], basestring):
+                    self.modconf['web_directories'] = [self.modconf['web_directories']]
+                elif not isinstance(self.modconf['web_directories'], list):
                     LOG.error('Invalid web_directories type. (web_directories: %r, module: %r)',
-                              ref_module['web_directories'],
+                              self.modconf['web_directories'],
                               self.MODULE_NAME)
-                    ref_module['web_directories'] = []
+                    self.modconf['web_directories'] = []
             else:
-                ref_module['web_directories'] = []
+                self.modconf['web_directories'] = []
 
-            if ref_module['web_directories']:
-                web_directories = ref_module['web_directories']
+            if self.modconf['web_directories']:
+                web_directories = self.modconf['web_directories']
 
         self.templates  = TemplateLookup(directories        = web_directories,
                                          output_encoding    = self.get_charset())

@@ -59,18 +59,19 @@ class DWhoPluginBase(object):
         self.initialized    = True
         self.config         = config
         self.server_id      = config['general']['server_id']
+        self.plugconf       = None
 
         if 'plugins' not in config \
            or self.PLUGIN_NAME not in config['plugins']:
             return self
 
-        ref_plugin          = config['plugins'][self.PLUGIN_NAME]
+        self.plugconf       = config['plugins'][self.PLUGIN_NAME]
 
-        if 'autostart' in ref_plugin:
-            self.autostart  = bool(ref_plugin['autostart'])
+        if 'autostart' in self.plugconf:
+            self.autostart  = bool(self.plugconf['autostart'])
 
         if 'enabled' in ref_plugin:
-            self.enabled    = bool(ref_plugin['enabled'])
+            self.enabled    = bool(self.plugconf['enabled'])
 
         return self
 
