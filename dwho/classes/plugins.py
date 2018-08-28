@@ -70,7 +70,7 @@ class DWhoPluginBase(object):
         if 'autostart' in self.plugconf:
             self.autostart  = bool(self.plugconf['autostart'])
 
-        if 'enabled' in ref_plugin:
+        if 'enabled' in self.plugconf:
             self.enabled    = bool(self.plugconf['enabled'])
 
         return self
