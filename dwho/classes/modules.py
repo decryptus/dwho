@@ -136,7 +136,7 @@ class DWhoModuleBase(object):
 
             if value.has_key('regexp'):
                 try:
-                    cmd_args['name']    = re.compile(value['regexp'])
+                    cmd_args['name'] = re.compile(value['regexp'])
                 except Exception, e:
                     LOG.exception("Unable to compile regexp. (regexp: %r, error: %r)", value['regexp'], e)
                     raise
@@ -148,16 +148,25 @@ class DWhoModuleBase(object):
                 if not value.get('root'):
                     LOG.error("Missing root for static route")
                 else:
-                    cmd_args['root']    = value['root']
+                    cmd_args['root'] = value['root']
 
-            for x in ('safe_init', 'at_start', 'at_stop'):
-                if value.get(x):
-                    if value[x] is True:
-                        cmd_args[x] = getattr(self, x)
-                    else:
-                        cmd_args[x] = getattr(self, value[x])
+            if isinstance(cmd_args['op'], basestring):
+                cmd_args['op'] = [cmd_args['op']]
 
-            http_json_server.register(**cmd_args)
+            for i, op in enumerate(cmd_args['op']):
+                cmd       = cmd_args.copy()
+                cmd['op'] = op
+
+                for x in ('safe_init', 'at_start', 'at_stop'):
+                    if i != 0:
+                        cmd[x] = None
+                    elif value.get(x):
+                        if value[x] is True:
+                            cmd[x] = getattr(self, x)
+                        else:
+                            cmd[x] = getattr(self, value[x])
+
+                http_json_server.register(**cmd)
 
 
 class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
