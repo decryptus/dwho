@@ -21,6 +21,7 @@ __license__ = """
 """
 
 import abc
+import copy
 import logging
 import os
 import pyinotify
@@ -323,9 +324,22 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
         self.dw_inotify = dw_inotify
         self.workerpool = dw_inotify.workerpool
 
-    def call_plugins(self, cfg_path, event):
+    def call_plugins(self, cfg_path, event, include_plugins = []):
         if not cfg_path.plugins:
             LOG.warning("No plugin enabled")
+            return
+
+        if not include_plugins:
+            conf_path = cfg_path
+        else:
+            conf_path = copy.copy(cfg_path)
+            plugins   = list(conf_path.plugins)
+            for plugin in plugins:
+                if plugin.PLUGIN_NAME not in include_plugins:
+                    conf_path.plugins.remove(plugin)
+
+        if not conf_path.plugins:
+            LOG.warning("No plugin included")
             return
 
         if not hasattr(event, 'pathname'):
@@ -340,11 +354,11 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
             LOG.exception("Encoding error file: %r", filepath)
             return
 
-        if cfg_path.exclude_filter and cfg_path.exclude_filter(filepath):
+        if conf_path.exclude_filter and conf_path.exclude_filter(filepath):
             LOG.debug("Exclude file from scan. (filepath: %r)", filepath)
             return
 
-        self.workerpool.run(DWhoInotifyPlugs(self.dw_inotify.config, cfg_path, event, filepath).run)
+        self.workerpool.run(DWhoInotifyPlugs(self.dw_inotify.config, conf_path, event, filepath).run)
 
     def process_IN_CREATE(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
