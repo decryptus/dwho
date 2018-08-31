@@ -141,6 +141,9 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
 
     def __init__(self):
         self.cfg_path = None
+        self.inoconf  = None
+        self.inopaths = None
+
         DWhoInoPlugBase.__init__(self)
         DWhoInotifyEventBase.__init__(self)
 
@@ -148,22 +151,45 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
         DWhoInoPlugBase.init(self, config)
         DWhoInotifyEventBase.init(self, config)
 
+        self.inoconf  = self.config['inotify']
+        self.inopaths = self.config['inotify']['paths']
+
         return self
+
+    def _get_path_all_options(self):
+        if not self.cfg_path \
+           or self.cfg_path.path not in self.inopaths \
+           or not isinstance(self.inopaths[self.cfg_path.path], dict):
+            return
+
+        return self.inopaths[self.cfg_path.path]
+
+    def _get_path_options(self):
+        path_all_options = self._get_path_all_options()
+
+        if not path_all_options \
+           or 'plugins' not in path_all_options \
+           or self.PLUGIN_NAME not in path_all_options['plugins'] \
+           or not isinstance(path_all_options['plugins'][self.PLUGIN_NAME], dict):
+            return
+
+        return path_all_options['plugins'][self.PLUGIN_NAME]
 
     @abc.abstractmethod
     def run(self, cfg_path, event, filepath):
         """Do the action."""
 
     def realdstpath(self, event, filepath, prefix = None):
-        if not self.cfg_path \
-           or self.cfg_path.path not in self.config['inotify']['paths']:
-            return filepath
+        r            = filepath
+        path_options = self._get_path_options()
 
-        r   = filepath
-        cfg = self.config['inotify']['paths'][self.cfg_path.path]
+        if not path_options:
+            path_options = self._get_path_all_options()
+            if not path_options:
+                return r
 
-        if cfg.get('dst') and filepath.startswith(self.cfg_path.path):
-            r = os.path.join(cfg['dst'], filepath[len(self.cfg_path.path):].lstrip(os.path.sep))
+        if path_options.get('dest') and filepath.startswith(self.cfg_path.path):
+            r = os.path.join(path_options['dest'], filepath[len(self.cfg_path.path):].lstrip(os.path.sep))
 
         if not prefix:
             return r
