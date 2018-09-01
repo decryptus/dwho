@@ -268,7 +268,9 @@ class DWhoInotify(Thread):
                                     exclude_filter  = cfg_path.exclude_filter)
 
             for wpath, wcode in wdd.iteritems():
-                if wcode < 0:
+                if wcode == -2:
+                    LOG.debug("Path excluded. (path: %r, code: %r)", wpath, wcode)
+                elif wcode < 0:
                     LOG.error("Unable to monitor. (path: %r, code: %r)", wpath, wcode)
                 else:
                     self.cfg_paths[wpath] = cfg_path
