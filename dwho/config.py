@@ -142,11 +142,12 @@ def load_conf(xfile, options = None, parse_conf_func = None):
         module.init(conf)
 
     for name, plugin in PLUGINS.iteritems():
+        LOG.info("plugin init: %r", name)
+        plugin.init(conf)
+
         if not plugin.enabled:
             continue
 
-        LOG.info("plugin init: %r", name)
-        plugin.init(conf)
         LOG.info("plugin safe_init: %r", name)
         plugin.safe_init()
         DWHO_THREADS.append(plugin.at_stop)

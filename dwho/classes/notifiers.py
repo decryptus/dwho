@@ -120,7 +120,8 @@ class DWhoPushNotifications(object):
             if notification['tpl']:
                 tpl = json.loads(Template(notification['tpl'],
                                           imports = ['import json',
-                                                     'from escapejson import escapejson']).render(**nvars))
+                                                     'from escapejson import escapejson',
+                                                     'from os import environ as ENV']).render(**nvars))
             else:
                 tpl = None
 

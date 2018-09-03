@@ -54,6 +54,7 @@ class DWhoModuleBase(object):
         self.charset        = 'utf-8'
         self.content_type   = 'application/json'
         self.initialized    = False
+        self.modconf        = None
         self.options        = None
 
     def _anonymous(self, request):
@@ -88,7 +89,6 @@ class DWhoModuleBase(object):
 
         self.initialized = True
         self.config      = config
-        self.modconf     = None
 
         ref_general      = config['general']
         routes_list      = []

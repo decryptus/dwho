@@ -50,6 +50,7 @@ class DWhoPluginBase(object):
         self.config      = None
         self.enabled     = True
         self.initialized = False
+        self.plugconf    = None
         self.server_id   = getfqdn()
 
     def init(self, config):
@@ -59,7 +60,6 @@ class DWhoPluginBase(object):
         self.initialized    = True
         self.config         = config
         self.server_id      = config['general']['server_id']
-        self.plugconf       = None
 
         if 'plugins' not in config \
            or self.PLUGIN_NAME not in config['plugins']:

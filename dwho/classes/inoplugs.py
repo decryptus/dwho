@@ -75,6 +75,7 @@ class DWhoInoPlugBase(object):
         self.config      = None
         self.enabled     = False
         self.initialized = False
+        self.plugconf    = None
 
     def init(self, config):
         if self.initialized:
@@ -82,7 +83,6 @@ class DWhoInoPlugBase(object):
 
         self.initialized    = True
         self.config         = config
-        self.plugconf       = None
 
         if 'inotify' not in config \
            or 'plugins' not in config['inotify'] \
