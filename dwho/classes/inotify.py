@@ -22,10 +22,12 @@ __license__ = """
 
 import abc
 import copy
+import glob
 import logging
 import os
 import pyinotify
 import Queue
+import sys
 
 from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
 from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
@@ -184,22 +186,202 @@ class DWhoInotifyConfig(object):
         return event in ALL_EVENTS
 
 
+class DWhoInotifyWatchManager(pyinotify.WatchManager):
+    def __init__(self, exclude_filter=lambda path: False):
+        pyinotify.WatchManager.__init__(self, exclude_filter)
+
+    def __format_path(self, path):
+        """
+        Format path to its internal (stored in watch manager) representation.
+        """
+        # Unicode strings are converted back to strings, because it seems
+        # that inotify_add_watch from ctypes does not work well when
+        # it receives an ctypes.create_unicode_buffer instance as argument.
+        # Therefore even wd are indexed with bytes string and not with
+        # unicode paths.
+        if isinstance(path, unicode):
+            path = path.encode(sys.getfilesystemencoding())
+        return os.path.normpath(path)
+
+    def __add_watch(self, path, mask, proc_fun, auto_add, exclude_filter):
+        """
+        Add a watch on path, build a Watch object and insert it in the
+        watch manager dictionary. Return the wd value.
+        """
+        path = self.__format_path(path)
+        if auto_add and not mask & pyinotify.IN_CREATE:
+            mask |= pyinotify.IN_CREATE
+        wd = self._inotify_wrapper.inotify_add_watch(self._fd, path, mask)
+        if wd < 0:
+            return wd
+        watch = pyinotify.Watch(wd=wd, path=path, mask=mask, proc_fun=proc_fun,
+                                auto_add=auto_add, exclude_filter=exclude_filter)
+        self._wmd[wd] = watch
+        LOG.debug('Added watch on path: %r', watch)
+        return wd
+
+    def __glob(self, path, do_glob):
+        if do_glob:
+            return glob.iglob(path)
+        else:
+            return [path]
+
+    def add_watch(self, path, mask, proc_fun=None, rec=False,
+                  auto_add=False, do_glob=False, quiet=True,
+                  exclude_filter=None):
+        """
+        Add watch(s) on the provided |path|(s) with associated |mask| flag
+        value and optionally with a processing |proc_fun| function and
+        recursive flag |rec| set to True.
+        Ideally |path| components should not be unicode objects. Note that
+        although unicode paths are accepted there are converted to byte
+        strings before a watch is put on that path. The encoding used for
+        converting the unicode object is given by sys.getfilesystemencoding().
+        If |path| is already watched it is ignored, but if it is called with
+        option rec=True a watch is put on each one of its not-watched
+        subdirectory.
+
+        @param path: Path to watch, the path can either be a file or a
+                     directory. Also accepts a sequence (list) of paths.
+        @type path: string or list of strings
+        @param mask: Bitmask of events.
+        @type mask: int
+        @param proc_fun: Processing object.
+        @type proc_fun: function or ProcessEvent instance or instance of
+                        one of its subclasses or callable object.
+        @param rec: Recursively add watches from path on all its
+                    subdirectories, set to False by default (doesn't
+                    follows symlinks in any case).
+        @type rec: bool
+        @param auto_add: Automatically add watches on newly created
+                         directories in watched parent |path| directory.
+                         If |auto_add| is True, IN_CREATE is ored with |mask|
+                         when the watch is added.
+        @type auto_add: bool
+        @param do_glob: Do globbing on pathname (see standard globbing
+                        module for more informations).
+        @type do_glob: bool
+        @param quiet: if False raises a WatchManagerError exception on
+                      error. See example not_quiet.py.
+        @type quiet: bool
+        @param exclude_filter: predicate (boolean function), which returns
+                               True if the current path must be excluded
+                               from being watched. This argument has
+                               precedence over exclude_filter passed to
+                               the class' constructor.
+        @type exclude_filter: callable object
+        @return: dict of paths associated to watch descriptors. A wd value
+                 is positive if the watch was added sucessfully,
+                 otherwise the value is negative. If the path was invalid
+                 or was already watched it is not included into this returned
+                 dictionary.
+        @rtype: dict of {str: int}
+        """
+        ret_ = {} # return {path: wd, ...}
+
+        if exclude_filter is None:
+            exclude_filter = self._exclude_filter
+
+        # normalize args as list elements
+        for npath in self.__format_param(path):
+            # unix pathname pattern expansion
+            for apath in self.__glob(npath, do_glob):
+                # recursively list subdirs according to rec param
+                for rpath in self.__walk_rec(apath, rec, exclude_filter):
+                    if not exclude_filter(rpath):
+                        wd = ret_[rpath] = self.__add_watch(rpath, mask,
+                                                            proc_fun,
+                                                            auto_add,
+                                                            exclude_filter)
+                        if wd < 0:
+                            err = ('add_watch: cannot watch %s WD=%d, %s' % \
+                                       (rpath, wd,
+                                        self._inotify_wrapper.str_errno()))
+                            if quiet:
+                                LOG.error(err)
+                            else:
+                                raise pyinotify.WatchManagerError(err, ret_)
+                    else:
+                        # Let's say -2 means 'explicitely excluded
+                        # from watching'.
+                        ret_[rpath] = -2
+        return ret_
+
+    def __get_sub_rec(self, lpath):
+        """
+        Get every wd from self._wmd if its path is under the path of
+        one (at least) of those in lpath. Doesn't follow symlinks.
+
+        @param lpath: list of watch descriptor
+        @type lpath: list of int
+        @return: list of watch descriptor
+        @rtype: list of int
+        """
+        for d in lpath:
+            root = self.get_path(d)
+            if root is not None:
+                # always keep root
+                yield d
+            else:
+                # if invalid
+                continue
+
+            # nothing else to expect
+            if not os.path.isdir(root):
+                continue
+
+            # normalization
+            root = os.path.normpath(root)
+            # recursion
+            lend = len(root)
+            for iwd in self._wmd.items():
+                cur = iwd[1].path
+                pref = os.path.commonprefix([root, cur])
+                if root == os.sep or (len(pref) == lend and \
+                                      len(cur) > lend and \
+                                      cur[lend] == os.sep):
+                    yield iwd[1].wd
+
+    def __format_param(self, param):
+        """
+        @param param: Parameter.
+        @type param: string or int
+        @return: wrap param.
+        @rtype: list of type(param)
+        """
+        if isinstance(param, list):
+            for p_ in param:
+                yield p_
+        else:
+            yield param
+
+    def __walk_rec(self, top, rec, exclude_filter):
+        if not rec or os.path.islink(top) or not os.path.isdir(top):
+            yield top
+        else:
+            for root, dirs, files in os.walk(top, topdown = True):
+                if exclude_filter(root):
+                    dirs[:] = []
+                yield root
+
+
 class DWhoInotify(Thread):
     def __init__(self):
+        Thread.__init__(self)
+
         self.config      = None
         self.killed      = False
         self.cfg_paths   = {}
+        self.name        = 'inotify'
         self.notifier    = None
         self.wm          = None
         self.workerpool  = None
 
-        Thread.__init__(self)
-
     def init(self, config):
         self.config     = config
-        self.workerpool = WorkerPool(None,
-                                     config['inotify'].get('max_workers', MAX_WORKERS),
-                                     config['inotify'].get('worker_lifetime'))
+        self.workerpool = WorkerPool(max_workers = int(config['inotify'].get('max_workers') or MAX_WORKERS),
+                                     life_time   = config['inotify'].get('worker_lifetime'),
+                                     name        = 'inoworker')
 
         return self
 
@@ -297,7 +479,7 @@ class DWhoInotify(Thread):
             del self.cfg_paths[cfg_path.path]
 
     def run(self):
-        self.wm         = pyinotify.WatchManager()
+        self.wm         = DWhoInotifyWatchManager()
         self.notifier   = pyinotify.ThreadedNotifier(self.wm,
                                                      DWhoInotifyEventHandler(**{'dw_inotify': self}))
         self.notifier.start()
@@ -321,12 +503,60 @@ class DWhoInotify(Thread):
         self.workerpool.killall(0)
 
 
-class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
-    def my_init(self, dw_inotify):
-        self.dw_inotify = dw_inotify
-        self.workerpool = dw_inotify.workerpool
+class DWhoInotifyPlugs(Thread):
+    THREADNAME = 'inoplugs'
 
-    def call_plugins(self, cfg_path, event, include_plugins = []):
+    def __init__(self, config, cfg_path, event, filepath):
+        Thread.__init__(self)
+
+        self.cache_expire = config['inotify'].get('cache_expire', CACHE_EXPIRE)
+        self.config       = config
+        self.cfg_path     = cfg_path
+        self.event        = event
+        self.filepath     = filepath
+        self.timeout      = config['inotify'].get('lock_timeout', LOCK_TIMEOUT)
+        self.server_id    = config['general']['server_id']
+        self.name         = self.THREADNAME
+
+    def run(self):
+        for plugin in self.cfg_path.plugins:
+            plug = None
+            try:
+                plug      = copy.copy(plugin)
+                self.name = "%s:%s" % (self.THREADNAME, plug.PLUGIN_NAME)
+
+                LOG.debug("Starting plugin %s. (filename: %r, thread: %r)",
+                          plug.PLUGIN_NAME,
+                          self.filepath,
+                          self.name)
+
+                plug(self.cfg_path, self.event, self.filepath)
+
+                LOG.debug("Stopping plugin %s. (filename: %r, thread: %r)",
+                          plug.PLUGIN_NAME,
+                          self.filepath,
+                          self.name)
+
+                self.name = self.THREADNAME
+            except Exception, e:
+                LOG.exception("Error during plugin. (error: %r, filename: %r)",
+                              e,
+                              self.filepath)
+            finally:
+                if plug:
+                    del plug
+
+    def __call__(self):
+        return self.run()
+
+
+class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
+    def my_init(self, dw_inotify, plugs_class = DWhoInotifyPlugs, workerpool = None):
+        self.dw_inotify  = dw_inotify
+        self.workerpool  = workerpool or dw_inotify.workerpool
+        self.plugs_class = plugs_class
+
+    def call_plugins(self, cfg_path, event, include_plugins = [], exclude_filter = None):
         if not cfg_path.plugins:
             LOG.warning("No plugin enabled")
             return
@@ -356,25 +586,51 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
             LOG.exception("Encoding error file: %r", filepath)
             return
 
-        if conf_path.exclude_filter and conf_path.exclude_filter(filepath):
-            LOG.debug("Exclude file from scan. (filepath: %r)", filepath)
-            return
+        if exclude_filter is not False:
+            if exclude_filter:
+                if exclude_filter(filepath):
+                    LOG.debug("Exclude file from scan. (filepath: %r)", filepath)
+                    return
+            elif conf_path.exclude_filter and conf_path.exclude_filter(filepath):
+                LOG.debug("Exclude file from scan. (filepath: %r)", filepath)
+                return
 
-        self.workerpool.run(DWhoInotifyPlugs(self.dw_inotify.config, conf_path, event, filepath).run)
+        self.workerpool.run(self.plugs_class(self.dw_inotify.config, conf_path, event, filepath))
+
+    def process_IN_ACCESS(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that an ACCESS event has occurred. (event: %r)", event)
+
+    def process_IN_ATTRIB(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that an ATTRIB event has occurred. (event: %r)", event)
 
     def process_IN_CREATE(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
         if cfg_path:
             self.call_plugins(cfg_path, event)
 
-        LOG.debug("DWhoInotifyEvent reports that an CREATE event has occurred. (event: %r)", event)
+        LOG.debug("DWhoInotifyEvent reports that a CREATE event has occurred. (event: %r)", event)
 
     def process_IN_CLOSE_WRITE(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
         if cfg_path:
             self.call_plugins(cfg_path, event)
 
-        LOG.debug("DWhoInotifyEvent reports that an CLOSE_WRITE event has occurred. (event: %r)", event)
+        LOG.debug("DWhoInotifyEvent reports that a CLOSE_WRITE event has occurred. (event: %r)", event)
+
+    def process_IN_CLOSE_NOWRITE(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that a CLOSE_NOWRITE event has occurred. (event: %r)", event)
 
     def process_IN_DELETE(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
@@ -383,19 +639,19 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
 
         LOG.debug("DWhoInotifyEvent reports that a DELETE event has occurred. (event: %r)", event)
 
+    def process_IN_DELETE_SELF(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that a DELETE_SELF event has occurred. (event: %r)", event)
+
     def process_IN_MODIFY(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
         if cfg_path:
             self.call_plugins(cfg_path, event)
 
         LOG.debug("DWhoInotifyEvent reports that a MODIFY event has occurred. (event: %r)", event)
-
-    def process_IN_ATTRIB(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a ATTRIB event has occurred. (event: %r)", event)
 
     def process_IN_MOVE_SELF(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
@@ -404,13 +660,6 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
 
         LOG.debug("DWhoInotifyEvent reports that a MOVE_SELF event has occurred. (event: %r)", event)
 
-    def process_IN_MOVED_TO(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a MOVED_TO event has occurred. (event: %r)", event)
-
     def process_IN_MOVED_FROM(self, event):
         cfg_path  = self.dw_inotify.get_cfg_path(event.path)
         if cfg_path:
@@ -418,43 +667,22 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
 
         LOG.debug("DWhoInotifyEvent reports that a MOVED_FROM event has occurred. (event: %r)", event)
 
+    def process_IN_MOVED_TO(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that a MOVED_TO event has occurred. (event: %r)", event)
+
+    def process_IN_OPEN(self, event):
+        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
+        if cfg_path:
+            self.call_plugins(cfg_path, event)
+
+        LOG.debug("DWhoInotifyEvent reports that an OPEN event has occurred. (event: %r)", event)
+
     def process_IN_Q_OVERFLOW(self, event):
         LOG.debug("DWhoInotifyEvent reports that a Q_OVERFLOW event has occurred. (event: %r)", event)
 
     def process_default(self, event):
         LOG.debug("DWhoInotifyEvent reports that an unsupported event has occurred. (event: %r)", event)
-
-
-class DWhoInotifyPlugs(Thread):
-    def __init__(self, config, cfg_path, event, filepath):
-        Thread.__init__(self)
-
-        self.cache_expire   = config['inotify'].get('cache_expire', CACHE_EXPIRE)
-        self.config         = config
-        self.cfg_path       = cfg_path
-        self.event          = event
-        self.filepath       = filepath
-        self.timeout        = config['inotify'].get('lock_timeout', LOCK_TIMEOUT)
-        self.server_id      = config['general']['server_id']
-
-    def run(self):
-        try:
-            for plugin in self.cfg_path.plugins:
-                LOG.debug("Starting plugin %s. (filename: %r, thread: %r)",
-                          plugin.PLUGIN_NAME,
-                          self.filepath,
-                          self.name)
-
-                plugin(self.cfg_path, self.event, self.filepath)
-
-                LOG.debug("Stopping plugin %s. (filename: %r, thread: %r)",
-                          plugin.PLUGIN_NAME,
-                          self.filepath,
-                          self.name)
-        except Exception, e:
-            LOG.exception("Error during plugin. (error: %r, filename: %r)",
-                          e,
-                          self.filepath)
-
-    def __call__(self):
-        return self.start()
