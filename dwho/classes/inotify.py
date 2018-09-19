@@ -28,12 +28,12 @@ import os
 import pyinotify
 import Queue
 import sys
+import threading
 
 from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
 from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
 from sonicprobe import helpers
 from sonicprobe.libs.workerpool import WorkerPool
-from threading import Thread
 
 LOG             = logging.getLogger('dwho.inotify')
 
@@ -365,9 +365,9 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
                 yield root
 
 
-class DWhoInotify(Thread):
+class DWhoInotify(threading.Thread):
     def __init__(self):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
 
         self.config      = None
         self.killed      = False
@@ -503,11 +503,11 @@ class DWhoInotify(Thread):
         self.workerpool.killall(0)
 
 
-class DWhoInotifyPlugs(Thread):
+class DWhoInotifyPlugs(threading.Thread):
     THREADNAME = 'inoplugs'
 
     def __init__(self, config, cfg_path, event, filepath):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
 
         self.cache_expire = config['inotify'].get('cache_expire', CACHE_EXPIRE)
         self.config       = config
@@ -545,6 +545,9 @@ class DWhoInotifyPlugs(Thread):
             finally:
                 if plug:
                     del plug
+
+        if hasattr(self.event, 'plugs_flag'):
+            self.event.plugs_flag.set()
 
     def __call__(self):
         return self.run()
@@ -597,92 +600,20 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
 
         self.workerpool.run(self.plugs_class(self.dw_inotify.config, conf_path, event, filepath))
 
-    def process_IN_ACCESS(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
+    def _process(self, xtype):
+        def launch_plugins(event):
+            event.plugs_flag  = threading.Event()
+            cfg_path          = self.dw_inotify.get_cfg_path(event.path)
+            if cfg_path:
+                self.call_plugins(cfg_path, event)
 
-        LOG.debug("DWhoInotifyEvent reports that an ACCESS event has occurred. (event: %r)", event)
+            LOG.debug("DWhoInotifyEvent reports that an event has occurred. (type: %r, event: %r)", xtype, event)
 
-    def process_IN_ATTRIB(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
+        return launch_plugins
 
-        LOG.debug("DWhoInotifyEvent reports that an ATTRIB event has occurred. (event: %r)", event)
-
-    def process_IN_CREATE(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a CREATE event has occurred. (event: %r)", event)
-
-    def process_IN_CLOSE_WRITE(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a CLOSE_WRITE event has occurred. (event: %r)", event)
-
-    def process_IN_CLOSE_NOWRITE(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a CLOSE_NOWRITE event has occurred. (event: %r)", event)
-
-    def process_IN_DELETE(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a DELETE event has occurred. (event: %r)", event)
-
-    def process_IN_DELETE_SELF(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a DELETE_SELF event has occurred. (event: %r)", event)
-
-    def process_IN_MODIFY(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a MODIFY event has occurred. (event: %r)", event)
-
-    def process_IN_MOVE_SELF(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a MOVE_SELF event has occurred. (event: %r)", event)
-
-    def process_IN_MOVED_FROM(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a MOVED_FROM event has occurred. (event: %r)", event)
-
-    def process_IN_MOVED_TO(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that a MOVED_TO event has occurred. (event: %r)", event)
-
-    def process_IN_OPEN(self, event):
-        cfg_path  = self.dw_inotify.get_cfg_path(event.path)
-        if cfg_path:
-            self.call_plugins(cfg_path, event)
-
-        LOG.debug("DWhoInotifyEvent reports that an OPEN event has occurred. (event: %r)", event)
-
-    def process_IN_Q_OVERFLOW(self, event):
-        LOG.debug("DWhoInotifyEvent reports that a Q_OVERFLOW event has occurred. (event: %r)", event)
+    def __getattr__(self, attr):
+        if attr.startswith("process_IN_"):
+            return self._process(attr[11:])
 
     def process_default(self, event):
         LOG.debug("DWhoInotifyEvent reports that an unsupported event has occurred. (event: %r)", event)
