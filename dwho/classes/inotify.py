@@ -376,6 +376,7 @@ class DWhoInotify(threading.Thread):
         self.notifier    = None
         self.wm          = None
         self.workerpool  = None
+        self.scan_event  = threading.Event()
 
     def init(self, config):
         self.config     = config
@@ -392,6 +393,9 @@ class DWhoInotify(threading.Thread):
     @staticmethod
     def rem(cfg_path):
         DWHO_INOQ.put((MODE_REM, cfg_path))
+
+    def is_scanning(self):
+        return self.scan_event.is_set() is not True
 
     @staticmethod
     def get_flag_value(name):
@@ -487,6 +491,7 @@ class DWhoInotify(threading.Thread):
         while not self.killed:
             try:
                 (mode, cfg_path) = DWHO_INOQ.get(True, 0.5)
+                self.scan_event.clear()
                 if mode == MODE_ADD:
                     self.__add_watch(cfg_path)
                 elif mode == MODE_REM:
@@ -494,7 +499,7 @@ class DWhoInotify(threading.Thread):
                 else:
                     raise DWhoInotifyError("Invalid mode: %r" % mode)
             except Queue.Empty:
-                pass
+                self.scan_event.set()
 
         self.notifier.stop()
 
