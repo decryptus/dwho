@@ -1,5 +1,5 @@
 escapejson
-httpdis>=0.0.5
+httpdis>=0.5.1
 Mako
 pyyaml>=3.10
 pyinotify
