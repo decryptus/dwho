@@ -25,10 +25,10 @@ import logging
 import re
 
 from dwho.classes.abstract import DWhoAbstractDB
+from httpdis import httpdis
+from httpdis.httpdis import HttpResponse
 from mako.lookup import TemplateLookup
 from mako.template import Template
-from sonicprobe.libs import http_json_server
-from sonicprobe.libs.http_json_server import HttpResponse
 
 LOG     = logging.getLogger('dwho.modules')
 
@@ -166,7 +166,7 @@ class DWhoModuleBase(object):
                         else:
                             cmd[x] = getattr(self, value[x])
 
-                http_json_server.register(**cmd)
+                httpdis.register(**cmd)
 
 
 class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):

@@ -1,7 +1,8 @@
 escapejson
+httpdis>=0.0.5
 Mako
 pyyaml>=3.10
 pyinotify
 redis>=2.4.0
 requests>=2.0
-sonicprobe>=0.2.49
+sonicprobe>=0.2.50

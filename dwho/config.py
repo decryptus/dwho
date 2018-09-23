@@ -28,10 +28,10 @@ from dwho.classes.errors import DWhoConfigurationError
 from dwho.classes.inoplugs import INOPLUGS
 from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
+from httpdis.httpdis import get_default_options
 from logging.handlers import WatchedFileHandler
 from sonicprobe.helpers import section_from_yaml_file
 from sonicprobe.libs import keystore, network
-from sonicprobe.libs.http_json_server import get_default_options
 from socket import getfqdn
 
 LOG             = logging.getLogger('dwho.config')
