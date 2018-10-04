@@ -21,8 +21,8 @@ __license__ = """
 """
 
 import logging
+import os
 import signal
-import yaml
 
 from dwho.classes.errors import DWhoConfigurationError
 from dwho.classes.inoplugs import INOPLUGS
@@ -30,7 +30,7 @@ from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
 from httpdis.httpdis import get_default_options
 from logging.handlers import WatchedFileHandler
-from sonicprobe.helpers import section_from_yaml_file
+from sonicprobe import helpers
 from sonicprobe.libs import keystore, network
 from socket import getfqdn
 
@@ -130,7 +130,7 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     signal.signal(signal.SIGINT, stop)
 
     with open(xfile, 'r') as f:
-        conf = yaml.load(f)
+        conf = helpers.load_yaml(f)
 
     if parse_conf_func:
         conf = parse_conf_func(conf)
@@ -176,7 +176,7 @@ def load_conf(xfile, options = None, parse_conf_func = None):
 
 def load_credentials(credentials, config_dir = None):
     if isinstance(credentials, basestring):
-        return section_from_yaml_file(credentials, config_dir = config_dir)
+        return helpers.section_from_yaml_file(credentials, config_dir = config_dir)
 
     return credentials
 
@@ -199,7 +199,19 @@ def start_inotify():
     start_inoplugs()
     _INOTIFY.start()
 
-def init_logger(logfile, name):
+def make_piddir(pidfile, uid, gid):
+    piddir = os.path.dirname(pidfile)
+    if piddir and not os.path.exists(piddir):
+        helpers.make_dirs(piddir)
+        os.chown(piddir, uid, gid)
+
+def make_logdir(logfile, uid, gid):
+    logdir = os.path.dirname(logfile)
+    if logdir and not os.path.exists(logdir):
+        helpers.make_dirs(logdir)
+        os.chown(logdir, uid, gid)
+
+def init_logger(logfile, name = None):
     xformat     = "%(levelname)s:%(asctime)-15s %(name)s[%(process)d][%(threadName)s]: %(message)s"
     datefmt     = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(level   = logging.DEBUG,
