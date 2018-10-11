@@ -132,6 +132,8 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     with open(xfile, 'r') as f:
         conf = helpers.load_yaml(f)
 
+    conf['_config_directory'] = os.path.dirname(os.path.abspath(xfile))
+
     if parse_conf_func:
         conf = parse_conf_func(conf)
     else:
