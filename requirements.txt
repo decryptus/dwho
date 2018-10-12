@@ -5,4 +5,4 @@ pyyaml>=3.10
 pyinotify
 redis>=2.4.0
 requests>=2.0
-sonicprobe>=0.2.63
+sonicprobe>=0.2.64
