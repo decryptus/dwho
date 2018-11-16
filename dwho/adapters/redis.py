@@ -98,6 +98,14 @@ class DWhoAdapterRedis(object):
                and server['conn'].exists(key):
                 return server['conn'].get(key)
 
+    def exists(self, key, servers = None, prefix = None):
+        if not servers:
+            servers = self.servers
+
+        for name, server in servers.iteritems():
+            if not prefix or name.startswith(prefix):
+                return server['conn'].exists(key)
+
     def keys(self, pattern = '*', servers = None, prefix = None):
         r = {}
 
