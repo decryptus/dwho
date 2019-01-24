@@ -72,6 +72,18 @@ class DWhoAdapterRedis(object):
 
         return self.servers[name]
 
+    def ping(self, servers = None, prefix = None):
+        r = {}
+
+        if not servers:
+            servers = self.servers
+
+        for name, server in servers.iteritems():
+            if not prefix or name.startswith(prefix):
+                r[name] = server['conn'].ping()
+
+        return r
+
     def set_key(self, key, val, expire = None, servers = None, prefix = None):
         r = {}
 

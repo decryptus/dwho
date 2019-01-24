@@ -131,7 +131,7 @@ class DWhoModuleBase(object):
                            'replacement':   value.get('replacement') or None,
                            'charset':       value.get('charset') or self.get_charset(),
                            'content_type':  value.get('content_type') or self.get_content_type(),
-                           'to_auth':       bool(value.get('auth')),
+                           'to_auth':       value.get('auth'),
                            'to_log':        bool(value.get('log', True))}
 
             if value.has_key('regexp'):
