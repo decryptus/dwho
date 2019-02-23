@@ -93,7 +93,7 @@ class DWhoAdapterRedis(object):
         if expire is not None:
             for name, server in servers.iteritems():
                 if not prefix or name.startswith(prefix):
-                    r[name] = server['conn'].setex(key, val, expire)
+                    r[name] = server['conn'].setex(name = key, time = expire, value = val)
         else:
             for name, server in servers.iteritems():
                 if not prefix or name.startswith(prefix):
