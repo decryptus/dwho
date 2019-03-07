@@ -30,10 +30,11 @@ import Queue
 import sys
 import threading
 
-from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
-from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
 from sonicprobe import helpers
 from sonicprobe.libs.workerpool import WorkerPool
+
+from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
+from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
 
 LOG             = logging.getLogger('dwho.inotify')
 

@@ -24,9 +24,9 @@ import abc
 import logging
 import os
 
-from dwho.classes.abstract import DWhoAbstractDB
 from socket import getfqdn
 
+from dwho.classes.abstract import DWhoAbstractDB
 
 CACHE_EXPIRE    = -1
 LOCK_TIMEOUT    = 60

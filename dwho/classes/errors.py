@@ -22,6 +22,7 @@ __license__ = """
 
 from pyinotify import PyinotifyError
 
+
 class DWhoError(Exception):
     pass
 

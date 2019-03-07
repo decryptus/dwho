@@ -24,11 +24,12 @@ import abc
 import logging
 import re
 
-from dwho.classes.abstract import DWhoAbstractDB
 from httpdis import httpdis
 from httpdis.httpdis import HttpResponse
 from mako.lookup import TemplateLookup
 from mako.template import Template
+
+from dwho.classes.abstract import DWhoAbstractDB
 
 LOG     = logging.getLogger('dwho.modules')
 

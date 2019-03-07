@@ -28,10 +28,11 @@ import requests
 import time
 import yaml
 
-from dwho.adapters.redis import DWhoAdapterRedis
 from mako.template import Template
 from socket import getfqdn
 from sonicprobe.libs import urisup
+
+from dwho.adapters.redis import DWhoAdapterRedis
 
 LOG = logging.getLogger('dwho.notifiers')
 

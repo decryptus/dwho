@@ -25,7 +25,7 @@ import logging
 
 from dwho.classes.abstract import DWhoAbstractDB
 
-LOG             = logging.getLogger('dwho.objects')
+LOG = logging.getLogger('dwho.objects')
 
 class DWhoObjectSQLBase(DWhoAbstractDB):
     __metaclass__ = abc.ABCMeta
