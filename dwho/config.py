@@ -64,11 +64,15 @@ def get_server_id(conf):
 
     return server_id
 
-def parse_conf(conf):
+def parse_conf(conf, load_creds = False):
     global _INOTIFY
 
     if 'general' not in conf:
         raise DWhoConfigurationError("Missing 'general' section in configuration")
+
+    if load_creds and 'credentials' in conf:
+        conf['credentials'] = load_credentials(conf['credentials'],
+                                               conf.get('_config_directory'))
 
     conf['general']['server_id'] = get_server_id(conf)
 
@@ -125,7 +129,7 @@ def parse_conf(conf):
 
     return conf
 
-def load_conf(xfile, options = None, parse_conf_func = None):
+def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False):
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
@@ -137,7 +141,7 @@ def load_conf(xfile, options = None, parse_conf_func = None):
     if parse_conf_func:
         conf = parse_conf_func(conf)
     else:
-        conf = parse_conf(conf)
+        conf = parse_conf(conf, load_creds)
 
     for name, module in MODULES.iteritems():
         LOG.info("module init: %r", name)
