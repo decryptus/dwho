@@ -20,19 +20,26 @@ __license__ = """
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
 """
 
-import logging
 import os
 import signal
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from six import StringIO
+
+import logging
+from logging.handlers import WatchedFileHandler
+
+from socket import getfqdn
+
+from httpdis.httpdis import get_default_options
+from sonicprobe import helpers
+from sonicprobe.libs import keystore, network
 from dwho.classes.errors import DWhoConfigurationError
 from dwho.classes.inoplugs import INOPLUGS
 from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
-from httpdis.httpdis import get_default_options
-from logging.handlers import WatchedFileHandler
-from sonicprobe import helpers
-from sonicprobe.libs import keystore, network
-from socket import getfqdn
 
 LOG             = logging.getLogger('dwho.config')
 
@@ -129,14 +136,22 @@ def parse_conf(conf, load_creds = False):
 
     return conf
 
-def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False):
+def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False, envvar = None):
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
-    with open(xfile, 'r') as f:
-        conf = helpers.load_yaml(f)
+    conf = {'_config_directory': None}
 
-    conf['_config_directory'] = os.path.dirname(os.path.abspath(xfile))
+    if os.path.exits(xfile):
+        with open(xfile, 'r') as f:
+            conf = helpers.load_yaml(f)
+
+        conf['_config_directory'] = os.path.dirname(os.path.abspath(xfile))
+    elif envvar and os.environ.get(envvar):
+        c = StringIO(os.environ[envvar])
+        conf = helpers.load_yaml(c.getvalue())
+        c.close()
+        conf['_config_directory'] = None
 
     if parse_conf_func:
         conf = parse_conf_func(conf)
