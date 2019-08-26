@@ -109,7 +109,7 @@ def parse_conf(conf, load_creds = False):
 
     if conf['general']['subdir_levels'] > 10:
         conf['general']['subdir_levels'] = 10
-        LOG.warning("option subdir_levels must not be greather than 10")
+        LOG.warning("option subdir_levels must not be greater than 10")
 
     if not conf['general'].has_key('auth_basic'):
         conf['general']['auth_basic'] = None
@@ -142,7 +142,7 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
 
     conf = {'_config_directory': None}
 
-    if os.path.exits(xfile):
+    if os.path.exists(xfile):
         with open(xfile, 'r') as f:
             conf = helpers.load_yaml(f)
 
