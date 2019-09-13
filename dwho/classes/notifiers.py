@@ -1,36 +1,21 @@
 # -*- coding: utf-8 -*-
-"""dwho notifiers"""
-
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2018  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.notifiers"""
 
 import abc
 import json
 import logging
 import os
-import requests
 import time
-import yaml
 
-from mako.template import Template
 from socket import getfqdn
+from mako.template import Template
 from sonicprobe.libs import urisup
+
+import requests
+import six
+import yaml
 
 from dwho.adapters.redis import DWhoAdapterRedis
 
@@ -42,7 +27,7 @@ class DWhoNotifiers(dict):
         if not isinstance(notifier, DWhoNotifierBase):
             raise TypeError("Invalid Notifier class. (class: %r)" % notifier)
 
-        if isinstance(notifier.SCHEME, basestring):
+        if isinstance(notifier.SCHEME, six.string_types):
             schemes = [notifier.SCHEME]
         else:
             schemes = notifier.SCHEME
@@ -59,7 +44,7 @@ class DWhoNotifiers(dict):
 NOTIFIERS = DWhoNotifiers()
 
 
-class DWhoPushNotifications(object):
+class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritance
     def __init__(self, server_id = None, config_path = None):
         self.notifications  = {}
         self.server_id      = server_id or getfqdn()
@@ -108,13 +93,16 @@ class DWhoPushNotifications(object):
         self.notifications = {}
         return self
 
-    def __call__(self, xvars = {}):
+    def __call__(self, xvars = None):
+        if not xvars:
+            xvars = {}
+
         nvars                 = xvars.copy()
         nvars['_VARS_']       = xvars.copy()
         nvars['_SERVER_ID_']  = self.server_id
         nvars['_TIMESTAMP_']  = time.time()
 
-        for name, notification in self.notifications.iteritems():
+        for name, notification in six.iteritems(self.notifications):
             if not notification['cfg']['general'].get('enabled', True):
                 continue
 
@@ -133,7 +121,7 @@ class DWhoPushNotifications(object):
                 notifier(name, cfg, tpl)
 
 
-class DWhoNotifierBase(object):
+class DWhoNotifierBase(object): # pylint: disable=useless-object-inheritance
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
@@ -164,8 +152,10 @@ class DWhoNotifierHttp(DWhoNotifierBase):
                 return True
 
             LOG.error("unable to push notification: %r: %r", name, r.text)
-        except Exception, e:
+        except Exception as e:
             LOG.error("unable to push notification %r: %r", name, e)
+
+        return None
 
 
 class DWhoNotifierRedis(DWhoNotifierBase):
@@ -173,8 +163,8 @@ class DWhoNotifierRedis(DWhoNotifierBase):
 
     def __call__(self, name, cfg, tpl):
         config = {'general':
-                   {'redis':
-                     {'notifier': cfg['general'].get('options') or {}}}}
+                  {'redis':
+                   {'notifier': cfg['general'].get('options') or {}}}}
         config['general']['redis']['notifier']['url'] = cfg['general']['uri']
 
         if not tpl:
@@ -184,7 +174,7 @@ class DWhoNotifierRedis(DWhoNotifierBase):
         try:
             adapter_redis = DWhoAdapterRedis(config, prefix = 'notifier')
             adapter_redis.set_key(tpl['key'], json.dumps(tpl['value']))
-        except Exception, e:
+        except Exception as e:
             LOG.error("unable to push notification %r: %r", name, e)
         else:
             LOG.info("notification pushed: %r", name)

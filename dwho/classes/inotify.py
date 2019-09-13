@@ -1,34 +1,19 @@
 # -*- coding: utf-8 -*-
-"""dwho inotify"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.inotify"""
 
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2017-2018  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
-
-import abc
 import copy
 import glob
 import logging
 import os
-import pyinotify
-import Queue
 import sys
 import threading
+
+import pyinotify
+
+import six
+from six.moves import queue as _queue
 
 from sonicprobe import helpers
 from sonicprobe.libs.workerpool import WorkerPool
@@ -38,7 +23,7 @@ from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
 
 LOG             = logging.getLogger('dwho.inotify')
 
-DWHO_INOQ       = Queue.Queue()
+DWHO_INOQ       = _queue.Queue()
 
 MODE_ADD        = 'MODE_ADD'
 MODE_REM        = 'MODE_REM'
@@ -67,7 +52,7 @@ DEFAULT_CONFIG  = {'plugins':   dict(zip(INOPLUGS.keys(),
                                  'moved_from']}
 
 
-class DWhoInotifyCfgPath(object):
+class DWhoInotifyCfgPath(object): # pylint: disable=useless-object-inheritance,too-few-public-methods
     def __init__(self,
                  path,
                  event_mask     = 0,
@@ -81,16 +66,16 @@ class DWhoInotifyCfgPath(object):
         self.exclude_filter = exclude_filter
 
 
-class DWhoInotifyConfig(object):
+class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
     def __call__(self, notifier, conf):
-        if not conf.has_key('plugins'):
+        if 'plugins' not in conf:
             conf['plugins'] = DEFAULT_CONFIG['plugins'].copy()
 
-        if not conf.has_key('events'):
+        if 'events' not in conf:
             conf['events'] = list(DEFAULT_CONFIG['events'])
 
-        if conf.has_key('exclude_files'):
-            if isinstance(conf['exclude_files'], basestring):
+        if 'exclude_files' in conf:
+            if isinstance(conf['exclude_files'], six.string_types):
                 conf['exclude_files'] = [conf['exclude_files']]
             elif not isinstance(conf['exclude_files'], list):
                 LOG.error('Invalid %s type. (%s: %r, section: %r)',
@@ -102,16 +87,16 @@ class DWhoInotifyConfig(object):
         else:
             conf['exclude_files'] = []
 
-        if not conf.has_key('paths') or not isinstance(conf['paths'], dict):
+        if 'paths' not in conf or not isinstance(conf['paths'], dict):
             raise DWhoConfigurationError("Missing paths configuration")
 
-        for path, value in conf['paths'].iteritems():
-            if not value.has_key('plugins'):
+        for path, value in six.iteritems(conf['paths']):
+            if 'plugins' not in value:
                 value['plugins'] = conf['plugins'].copy()
 
             value['event_masks']    = 0
 
-            if not value.has_key('events'):
+            if 'events' not in value:
                 value['events'] = list(conf['events'])
             else:
                 for event in value['events']:
@@ -124,17 +109,16 @@ class DWhoInotifyConfig(object):
             if not value['events']:
                 raise DWhoConfigurationError("Invalid configured events. (events: %r, path: %r)"
                                              % (value['events'], path))
-            else:
-                for event in value['events']:
-                    if not self.valid_event(event):
-                        raise DWhoConfigurationError("Invalid configured event: %r. (path: %r)"
-                                                     % (event, path))
-                    value['event_masks'] |= DWhoInotify.get_flag_value(event)
+            for event in value['events']:
+                if not self.valid_event(event):
+                    raise DWhoConfigurationError("Invalid configured event: %r. (path: %r)"
+                                                 % (event, path))
+                value['event_masks'] |= DWhoInotify.get_flag_value(event)
 
-            if not value.has_key('exclude_files'):
+            if 'exclude_files' not in value:
                 value['exclude_files'] = list(conf['exclude_files'])
             else:
-                if isinstance(value['exclude_files'], basestring):
+                if isinstance(value['exclude_files'], six.string_types):
                     value['exclude_files'] = [value['exclude_files']]
                 elif not isinstance(value['exclude_files'], list):
                     raise DWhoConfigurationError("Invalid exclude_files type. (exclude_files: %r, path: %r)"
@@ -163,13 +147,13 @@ class DWhoInotifyConfig(object):
             else:
                 value['exclude_patterns'] = None
 
-        for path, value in conf['paths'].iteritems():
+        for path, value in six.iteritems(conf['paths']):
             plugins     = []
             if value['plugins']:
-                for plugin, options in value['plugins'].iteritems():
+                for plugin, options in six.iteritems(value['plugins']):
                     if not options:
                         continue
-                    if INOPLUGS.has_key(plugin):
+                    if plugin in INOPLUGS:
                         plugins.append(INOPLUGS[plugin])
 
             if not os.path.exists(path):
@@ -200,7 +184,7 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
         # it receives an ctypes.create_unicode_buffer instance as argument.
         # Therefore even wd are indexed with bytes string and not with
         # unicode paths.
-        if isinstance(path, unicode):
+        if isinstance(path, six.text_type):
             path = path.encode(sys.getfilesystemencoding())
         return os.path.normpath(path)
 
@@ -210,6 +194,7 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
         watch manager dictionary. Return the wd value.
         """
         path = self.__format_path(path)
+        # pylint: disable=no-member
         if auto_add and not mask & pyinotify.IN_CREATE:
             mask |= pyinotify.IN_CREATE
         wd = self._inotify_wrapper.inotify_add_watch(self._fd, path, mask)
@@ -224,9 +209,9 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
     def __glob(self, path, do_glob):
         if do_glob:
             return glob.iglob(path)
-        else:
-            return [path]
+        return [path]
 
+    # pylint: disable=too-many-arguments
     def add_watch(self, path, mask, proc_fun=None, rec=False,
                   auto_add=False, do_glob=False, quiet=True,
                   exclude_filter=None):
@@ -360,7 +345,7 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
         if not rec or os.path.islink(top) or not os.path.isdir(top):
             yield top
         else:
-            for root, dirs, files in os.walk(top, topdown = True):
+            for root, dirs, files in os.walk(top, topdown = True): # pylint: disable=unused-variable
                 if exclude_filter(root):
                     dirs[:] = []
                 yield root
@@ -400,26 +385,28 @@ class DWhoInotify(threading.Thread):
 
     @staticmethod
     def get_flag_value(name):
-        if pyinotify.EventsCodes.ALL_FLAGS.has_key(name):
+        if name in pyinotify.EventsCodes.ALL_FLAGS:
             return pyinotify.EventsCodes.ALL_FLAGS.get(name)
 
-        if not isinstance(name, basestring):
-            return
+        if not isinstance(name, six.string_types):
+            return None
 
         uname   = name.upper()
-        if pyinotify.EventsCodes.ALL_FLAGS.has_key(uname):
+        if uname in pyinotify.EventsCodes.ALL_FLAGS:
             return pyinotify.EventsCodes.ALL_FLAGS.get(uname)
 
         uname   = "IN_%s" % uname
-        if pyinotify.EventsCodes.ALL_FLAGS.has_key(uname):
+        if uname in pyinotify.EventsCodes.ALL_FLAGS:
             return pyinotify.EventsCodes.ALL_FLAGS.get(uname)
+
+        return None
 
     @staticmethod
     def valid_flag(name):
         return DWhoInotify.get_flag_value(name) is not None
 
     def get_cfg_path(self, path):
-        if self.cfg_paths.has_key(path):
+        if path in self.cfg_paths:
             LOG.debug("path: %r, wd_path: %r, common: %r",
                       path,
                       path.rstrip(os.sep),
@@ -428,7 +415,7 @@ class DWhoInotify(threading.Thread):
 
         try:
             cfg_paths = self.cfg_paths.copy()
-            for wd_path in cfg_paths.iterkeys():
+            for wd_path in six.iterkeys(cfg_paths):
                 if os.path.commonprefix([path, wd_path]) == wd_path.rstrip(os.sep):
                     LOG.debug("path: %r, wd_path: %r, common: %r",
                               path,
@@ -437,6 +424,8 @@ class DWhoInotify(threading.Thread):
                     return self.cfg_paths[wd_path]
         finally:
             cfg_paths = None
+
+        return None
 
     def __add_watch(self, cfg_path):
         LOG.debug("Add watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
@@ -454,20 +443,20 @@ class DWhoInotify(threading.Thread):
                                     do_glob         = cfg_path.do_glob,
                                     exclude_filter  = cfg_path.exclude_filter)
 
-            for wpath, wcode in wdd.iteritems():
+            for wpath, wcode in six.iteritems(wdd):
                 if wcode == -2:
                     LOG.debug("Path excluded. (path: %r, code: %r)", wpath, wcode)
                 elif wcode < 0:
                     LOG.error("Unable to monitor. (path: %r, code: %r)", wpath, wcode)
                 else:
                     self.cfg_paths[wpath] = cfg_path
-        except pyinotify.WatchManagerError, e:
+        except pyinotify.WatchManagerError as e:
             LOG.exception("Unable to monitor. (path: %r, reason: %r)", cfg_path.path, e)
         finally:
             wdd = None
 
     def __rem_watch(self, cfg_path):
-        if not self.cfg_paths.has_key(cfg_path.path):
+        if cfg_path.path not in self.cfg_paths:
             return
 
         LOG.debug("Remove watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
@@ -478,7 +467,7 @@ class DWhoInotify(threading.Thread):
 
         try:
             self.wm.rm_watch(cfg_path.path, rec = True, quiet = False)
-        except pyinotify.WatchManagerError, e:
+        except pyinotify.WatchManagerError as e:
             LOG.exception("Unable to unmonitor. (path: %r, reason: %r)", cfg_path.path, e)
         else:
             del self.cfg_paths[cfg_path.path]
@@ -499,7 +488,7 @@ class DWhoInotify(threading.Thread):
                     self.__rem_watch(cfg_path)
                 else:
                     raise DWhoInotifyError("Invalid mode: %r" % mode)
-            except Queue.Empty:
+            except _queue.Empty:
                 self.scan_event.set()
 
         self.notifier.stop()
@@ -544,7 +533,7 @@ class DWhoInotifyPlugs(threading.Thread):
                           self.name)
 
                 self.name = self.THREADNAME
-            except Exception, e:
+            except Exception as e:
                 LOG.exception("Error during plugin. (error: %r, filename: %r)",
                               e,
                               self.filepath)
@@ -560,12 +549,12 @@ class DWhoInotifyPlugs(threading.Thread):
 
 
 class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
-    def my_init(self, dw_inotify, plugs_class = DWhoInotifyPlugs, workerpool = None):
+    def my_init(self, dw_inotify, plugs_class = DWhoInotifyPlugs, workerpool = None): # pylint: disable=arguments-differ
         self.dw_inotify  = dw_inotify
         self.workerpool  = workerpool or dw_inotify.workerpool
         self.plugs_class = plugs_class
 
-    def call_plugins(self, cfg_path, event, include_plugins = [], exclude_filter = None):
+    def call_plugins(self, cfg_path, event, include_plugins = None, exclude_filter = None):
         if not cfg_path.plugins:
             LOG.warning("No plugin enabled")
             return
@@ -620,6 +609,8 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
     def __getattr__(self, attr):
         if attr.startswith("process_IN_"):
             return self._process(attr[11:])
+
+        return None
 
     def process_default(self, event):
         LOG.debug("DWhoInotifyEvent reports that an unsupported event has occurred. (event: %r)", event)

@@ -1,33 +1,17 @@
 # -*- coding: utf-8 -*-
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.adapters.redis"""
+
 from __future__ import absolute_import
 
-"""DWho Redis Adapter"""
+import six
+from six.moves.urllib.parse import urlparse, parse_qs
 
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2016-2018  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
-
-import redis
-
-from urlparse import urlparse, parse_qs
+from redis import Redis
 
 
-class DWhoAdapterRedis(object):
+class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
     def __init__(self, config, prefix = None, load = True):
         self.config  = config
         self.servers = {}
@@ -36,7 +20,7 @@ class DWhoAdapterRedis(object):
             self.load(prefix)
 
     def load(self, prefix = None):
-        for name in self.config['general']['redis'].iterkeys():
+        for name in six.iterkeys(self.config['general']['redis']):
             if not prefix or name.startswith(prefix):
                 self.connect(name)
 
@@ -49,13 +33,13 @@ class DWhoAdapterRedis(object):
         if self.servers[name]['conn']:
             return self.servers[name]
 
-        has_from_url = hasattr(redis.Redis, 'from_url')
-        for key, value in self.config['general']['redis'][name].iteritems():
+        has_from_url = hasattr(Redis, 'from_url')
+        for key, value in six.iteritems(self.config['general']['redis'][name]):
             if key != 'url':
                 self.servers[name]['options'][key] = value
                 continue
             elif has_from_url:
-                self.servers[name]['conn'] = redis.Redis().from_url(value)
+                self.servers[name]['conn'] = Redis().from_url(value)
                 continue
 
             p     = urlparse(value)
@@ -68,7 +52,7 @@ class DWhoAdapterRedis(object):
                 if 'db' in q:
                     rconf['db'] = int(q['db'][0])
 
-            self.servers[name]['conn'] = redis.Redis(**rconf)
+            self.servers[name]['conn'] = Redis(**rconf)
 
         return self.servers[name]
 
@@ -78,7 +62,7 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].ping()
 
@@ -91,11 +75,11 @@ class DWhoAdapterRedis(object):
             servers = self.servers
 
         if expire is not None:
-            for name, server in servers.iteritems():
+            for name, server in six.iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].setex(name = key, time = expire, value = val)
         else:
-            for name, server in servers.iteritems():
+            for name, server in six.iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].set(key, val)
 
@@ -105,10 +89,12 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 return server['conn'].get(key)
+
+        return None
 
     def del_key(self, key, servers = None, prefix = None):
         r = {}
@@ -119,7 +105,7 @@ class DWhoAdapterRedis(object):
         if not isinstance(key, (list, tuple)):
             key = [key]
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].delete(*key)
 
@@ -134,7 +120,7 @@ class DWhoAdapterRedis(object):
         if not isinstance(key, (list, tuple)):
             key = [key]
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].exists(*key)
 
@@ -146,7 +132,7 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 r[name] = server['conn'].expire(key, xtime)
@@ -160,12 +146,12 @@ class DWhoAdapterRedis(object):
             servers = self.servers
 
         if expire is not None:
-            for name, server in servers.iteritems():
+            for name, server in six.iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].hset(key, field, val)
                     server['conn'].expire(key, expire)
         else:
-            for name, server in servers.iteritems():
+            for name, server in six.iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].hset(key, field, val)
 
@@ -175,10 +161,12 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 return server['conn'].hget(key, field)
+
+        return None
 
     def hdel_key(self, key, field, servers = None, prefix = None):
         r = {}
@@ -189,7 +177,7 @@ class DWhoAdapterRedis(object):
         if not isinstance(field, (list, tuple)):
             field = [field]
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].hdel(key, *field)
 
@@ -199,9 +187,11 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 return server['conn'].exists(key)
+
+        return None
 
     def keys(self, pattern = '*', servers = None, prefix = None):
         r = {}
@@ -209,7 +199,7 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].keys(pattern)
 
@@ -224,7 +214,7 @@ class DWhoAdapterRedis(object):
         if not isinstance(member, (list, tuple)):
             member = [member]
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].sadd(key, *member)
 
@@ -239,12 +229,13 @@ class DWhoAdapterRedis(object):
         if not isinstance(member, (list, tuple)):
             member = [member]
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].srem(key, *member)
 
         return r
 
+    # pylint: disable=too-many-arguments
     def sort(self, key, start = None, num = None, by = None, get = None,
              desc = False, alpha = False, store = None,
              servers = None, prefix = None):
@@ -254,7 +245,7 @@ class DWhoAdapterRedis(object):
         if not servers:
             servers = self.servers
 
-        for name, server in servers.iteritems():
+        for name, server in six.iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].sort(name   = key,
                                               start  = start,

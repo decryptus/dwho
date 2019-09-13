@@ -1,28 +1,12 @@
 # -*- coding: utf-8 -*-
-"""DWho modules"""
-
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2015  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.modules"""
 
 import abc
 import logging
 import re
+import six
 
 from httpdis import httpdis
 from httpdis.httpdis import HttpResponse
@@ -43,7 +27,7 @@ class DWhoModules(dict):
 MODULES = DWhoModules()
 
 
-class DWhoModuleBase(object):
+class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
@@ -58,16 +42,16 @@ class DWhoModuleBase(object):
         self.modconf        = None
         self.options        = None
 
-    def _anonymous(self, request):
+    def _anonymous(self, request): # pylint: disable=unused-argument,no-self-use
         return
 
     def at_start(self, options):
         self.options        = options
 
-    def safe_init(self, options):
+    def safe_init(self, options): # pylint: disable=no-self-use,unused-argument
         return
 
-    def at_stop(self):
+    def at_stop(self): # pylint: disable=no-self-use
         return
 
     def set_charset(self, charset):
@@ -94,23 +78,23 @@ class DWhoModuleBase(object):
         ref_general      = config['general']
         routes_list      = []
 
-        if ref_general.has_key('charset'):
+        if 'charset' in ref_general:
             self.set_charset(ref_general['charset'])
 
-        if ref_general.has_key('content_type'):
+        if 'content_type' in ref_general:
             self.set_content_type(ref_general['content_type'])
 
-        if config.has_key('modules') \
-           and config['modules'].has_key(self.MODULE_NAME):
+        if 'modules' in config \
+           and self.MODULE_NAME in config['modules']:
             self.modconf = config['modules'][self.MODULE_NAME]
 
-            if self.modconf.has_key('charset'):
+            if 'charset' in self.modconf:
                 self.set_charset(self.modconf['charset'])
 
-            if self.modconf.has_key('content_type'):
+            if 'content_type' in self.modconf:
                 self.set_content_type(self.modconf['content_type'])
 
-            if self.modconf.has_key('routes') and isinstance(self.modconf['routes'], dict):
+            if 'routes' in self.modconf and isinstance(self.modconf['routes'], dict):
                 routes_list.append(self.modconf['routes'])
 
         for routes in routes_list:
@@ -119,7 +103,7 @@ class DWhoModuleBase(object):
         return self
 
     def _register_commands(self, routes):
-        for value in routes.itervalues():
+        for value in six.itervalues(routes):
             LOG.debug("Route: %r", value)
             cmd_args    = {'op':            value.get('op') or 'GET',
                            'safe_init':     None,
@@ -135,10 +119,10 @@ class DWhoModuleBase(object):
                            'to_auth':       value.get('auth'),
                            'to_log':        bool(value.get('log', True))}
 
-            if value.has_key('regexp'):
+            if 'regexp' in value:
                 try:
                     cmd_args['name'] = re.compile(value['regexp'])
-                except Exception, e:
+                except Exception as e:
                     LOG.exception("Unable to compile regexp. (regexp: %r, error: %r)", value['regexp'], e)
                     raise
 
@@ -151,7 +135,7 @@ class DWhoModuleBase(object):
                 else:
                     cmd_args['root'] = value['root']
 
-            if isinstance(cmd_args['op'], basestring):
+            if isinstance(cmd_args['op'], six.string_types):
                 cmd_args['op'] = [cmd_args['op']]
 
             for i, op in enumerate(cmd_args['op']):
@@ -173,6 +157,11 @@ class DWhoModuleBase(object):
 class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
     __metaclass__ = abc.ABCMeta
 
+
+    @abc.abstractproperty
+    def MODULE_NAME(self):
+        return
+
     def __init__(self):
         DWhoModuleBase.__init__(self)
         DWhoAbstractDB.__init__(self)
@@ -180,11 +169,11 @@ class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
     def init(self, config):
         DWhoModuleBase.init(self, config)
 
-        for key in config['general'].iterkeys():
+        for key in six.iterkeys(config['general']):
             if not key.startswith('db_uri_'):
                 continue
             name = key[7:]
-            if not self.db.has_key(name):
+            if name not in self.db:
                 self.db[name] = {'conn': None, 'cursor': None}
 
         return self
@@ -192,6 +181,11 @@ class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
 
 class DWhoModuleWebBase(DWhoModuleBase):
     __metaclass__ = abc.ABCMeta
+
+
+    @abc.abstractproperty
+    def MODULE_NAME(self):
+        return
 
     def __init__(self):
         DWhoModuleBase.__init__(self)
@@ -214,8 +208,8 @@ class DWhoModuleWebBase(DWhoModuleBase):
         web_directories = config['general']['web_directories']
 
         if self.modconf:
-            if self.modconf.has_key('web_directories'):
-                if isinstance(self.modconf['web_directories'], basestring):
+            if 'web_directories' in self.modconf:
+                if isinstance(self.modconf['web_directories'], six.string_types):
                     self.modconf['web_directories'] = [self.modconf['web_directories']]
                 elif not isinstance(self.modconf['web_directories'], list):
                     LOG.error('Invalid web_directories type. (web_directories: %r, module: %r)',

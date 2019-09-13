@@ -1,28 +1,12 @@
 # -*- coding: utf-8 -*-
-"""DWho plugins"""
-
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2016-2018  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.inoplugs"""
 
 import abc
 import logging
 import os
+import six
 
 from socket import getfqdn
 
@@ -42,7 +26,7 @@ class DWhoInoPlugs(dict):
 INOPLUGS = DWhoInoPlugs()
 
 
-class DWhoInotifyEventBase(object):
+class DWhoInotifyEventBase(object): # pylint: disable=useless-object-inheritance
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):
@@ -63,7 +47,7 @@ class DWhoInotifyEventBase(object):
         return self
 
 
-class DWhoInoPlugBase(object):
+class DWhoInoPlugBase(object): # pylint: disable=useless-object-inheritance
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractproperty
@@ -94,7 +78,8 @@ class DWhoInoPlugBase(object):
         if isinstance(self.plugconf, bool):
             self.enabled    = self.plugconf
             return self
-        elif not isinstance(self.plugconf, dict):
+
+        if not isinstance(self.plugconf, dict):
             self.enabled    = False
             return self
 
@@ -106,31 +91,35 @@ class DWhoInoPlugBase(object):
 
         return self
 
-    def at_start(self):
+    def at_start(self): # pylint: disable=no-self-use
         return
 
-    def at_stop(self):
+    def at_stop(self): # pylint: disable=no-self-use
         return
 
-    def safe_init(self):
+    def safe_init(self): # pylint: disable=no-self-use
         return
 
 
 class DWhoInoPluginSQLBase(DWhoInoPlugBase, DWhoAbstractDB):
     __metaclass__ = abc.ABCMeta
 
+    @abc.abstractproperty
+    def PLUGIN_NAME(self):
+        return
+
     def __init__(self):
-        DWhoPluginBase.__init__(self)
+        DWhoInoPlugBase.__init__(self)
         DWhoAbstractDB.__init__(self)
 
     def init(self, config):
-        DWhoPluginBase.init(self, config)
+        DWhoInoPlugBase.init(self, config)
 
-        for key in config['general'].iterkeys():
+        for key in six.iterkeys(config['general']):
             if not key.startswith('db_uri_'):
                 continue
             name = key[7:]
-            if not self.db.has_key(name):
+            if name not in self.db:
                 self.db[name] = {'conn': None, 'cursor': None}
 
         return self
@@ -160,7 +149,7 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
         if not self.cfg_path \
            or self.cfg_path.path not in self.inopaths \
            or not isinstance(self.inopaths[self.cfg_path.path], dict):
-            return
+            return None
 
         return self.inopaths[self.cfg_path.path]
 
@@ -171,7 +160,7 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
            or 'plugins' not in path_all_options \
            or self.PLUGIN_NAME not in path_all_options['plugins'] \
            or not isinstance(path_all_options['plugins'][self.PLUGIN_NAME], dict):
-            return
+            return None
 
         return path_all_options['plugins'][self.PLUGIN_NAME]
 
@@ -179,7 +168,7 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
     def run(self, cfg_path, event, filepath):
         """Do the action."""
 
-    def realdstpath(self, event, filepath, prefix = None):
+    def realdstpath(self, event, filepath, prefix = None): # pylint: disable=unused-argument
         r            = filepath
         path_options = self._get_path_options()
 

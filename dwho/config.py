@@ -1,37 +1,21 @@
 # -*- coding: utf-8 -*-
-"""dwho configuration"""
-
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2015  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.config"""
 
 import os
 import signal
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from six import StringIO
 
 import logging
 from logging.handlers import WatchedFileHandler
 
 from socket import getfqdn
+
+import six
+try:
+    from six.moves import cStringIO as StringIO
+except ImportError:
+    from six import StringIO
 
 from httpdis.httpdis import get_default_options
 from sonicprobe import helpers
@@ -55,7 +39,7 @@ DWHO_THREADS    = []
 _INOTIFY        = None
 
 
-def stop(signum, stack_frame):
+def stop(signum, stack_frame): # pylint: disable=unused-argument
     for thread in DWHO_THREADS:
         thread()
 
@@ -95,15 +79,15 @@ def parse_conf(conf, load_creds = False):
     if not conf['general'].get('max_life_time'):
         conf['general']['max_life_time'] = MAX_LIFE_TIME
 
-    if not conf['general'].has_key('auth_basic_file'):
+    if 'auth_basic_file' not in conf['general']:
         conf['general']['auth_basic'] = None
         conf['general']['auth_basic_file'] = None
 
-    if not conf['general'].has_key('subdir_levels'):
+    if 'subdir_levels' not in conf['general']:
         conf['general']['subdir_levels'] = SUBDIR_LEVELS
     conf['general']['subdir_levels'] = int(conf['general']['subdir_levels'])
 
-    if not conf['general'].has_key('subdir_chars'):
+    if 'subdir_chars' not in conf['general']:
         conf['general']['subdir_chars'] = SUBDIR_CHARS
     conf['general']['subdir_chars'] = set(str(conf['general']['subdir_chars']))
 
@@ -111,11 +95,11 @@ def parse_conf(conf, load_creds = False):
         conf['general']['subdir_levels'] = 10
         LOG.warning("option subdir_levels must not be greater than 10")
 
-    if not conf['general'].has_key('auth_basic'):
+    if 'auth_basic' not in conf['general']:
         conf['general']['auth_basic'] = None
 
-    if conf['general'].has_key('web_directories'):
-        if isinstance(conf['general']['web_directories'], basestring):
+    if 'web_directories' in conf['general']:
+        if isinstance(conf['general']['web_directories'], six.string_types):
             conf['general']['web_directories'] = [conf['general']['web_directories']]
         elif not isinstance(conf['general']['web_directories'], list):
             LOG.error('Invalid %s type. (%s: %r, section: %r)',
@@ -158,11 +142,11 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     else:
         conf = parse_conf(conf, load_creds)
 
-    for name, module in MODULES.iteritems():
+    for name, module in six.iteritems(MODULES):
         LOG.info("module init: %r", name)
         module.init(conf)
 
-    for name, plugin in PLUGINS.iteritems():
+    for name, plugin in six.iteritems(PLUGINS):
         LOG.info("plugin init: %r", name)
         plugin.init(conf)
 
@@ -176,7 +160,7 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     if _INOTIFY:
         _INOTIFY.init(conf)
 
-        for name, inoplug in INOPLUGS.iteritems():
+        for name, inoplug in six.iteritems(INOPLUGS):
             LOG.info("inoplug init: %r", name)
             inoplug.init(conf)
             LOG.info("inoplug safe_init: %r", name)
@@ -186,7 +170,7 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     if not options or not isinstance(options, object):
         return conf
 
-    for def_option in get_default_options().iterkeys():
+    for def_option in six.iterkeys(get_default_options()):
         if getattr(options, def_option, None) is None \
            and def_option in conf['general']:
             setattr(options, def_option, conf['general'][def_option])
@@ -196,19 +180,19 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     return options
 
 def load_credentials(credentials, config_dir = None):
-    if isinstance(credentials, basestring):
+    if isinstance(credentials, six.string_types):
         return helpers.section_from_yaml_file(credentials, config_dir = config_dir)
 
     return credentials
 
 def start_plugins():
-    for name, plugin in PLUGINS.iteritems():
+    for name, plugin in six.iteritems(PLUGINS):
         if plugin.enabled and plugin.autostart:
             LOG.info("plugin at_start: %r", name)
             plugin.at_start()
 
 def start_inoplugs():
-    for name, inoplug in INOPLUGS.iteritems():
+    for name, inoplug in six.iteritems(INOPLUGS):
         if inoplug.enabled and inoplug.autostart:
             LOG.info("inoplug at_start: %r", name)
             inoplug.at_start()
@@ -232,7 +216,7 @@ def make_logdir(logfile, uid, gid):
         helpers.make_dirs(logdir)
         os.chown(logdir, uid, gid)
 
-def init_logger(logfile, name = None):
+def init_logger(logfile, name = None): # pylint: disable=unused-argument
     xformat     = "%(levelname)s:%(asctime)-15s %(name)s[%(process)d][%(threadName)s]: %(message)s"
     datefmt     = '%Y-%m-%d %H:%M:%S'
     logging.basicConfig(level   = logging.DEBUG,

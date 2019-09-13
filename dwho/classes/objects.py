@@ -1,27 +1,11 @@
 # -*- coding: utf-8 -*-
-"""DWho object"""
-
-__author__  = "Adrien DELLE CAVE <adc@doowan.net>"
-__license__ = """
-    Copyright (C) 2015  doowan
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License along
-    with this program; if not, write to the Free Software Foundation, Inc.,
-    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA..
-"""
+# Copyright (C) 2015-2019 Adrien Delle Cave
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""dwho.classes.object"""
 
 import abc
 import logging
+import six
 
 from dwho.classes.abstract import DWhoAbstractDB
 
@@ -49,7 +33,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
     def init(self, config):
         self.config = config
 
-        if not self.db.has_key(self.CONNECTION_NAME):
+        if self.CONNECTION_NAME not in self.db:
             self.db[self.CONNECTION_NAME] = {'conn':    None,
                                              'cursor':  None}
 
@@ -66,7 +50,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         q   = []
         v   = []
 
-        for key, value in elements.iteritems():
+        for key, value in six.iteritems(elements):
             if isinstance(value, (list, tuple)):
                 q.append(("%s IN(" + ", ".join(["?"] * len(value)) + ") ") % key)
                 v.extend(value)
@@ -84,7 +68,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         if not isinstance(columns, (list, tuple)):
             raise ValueError("Invalid columns for LIKE condition. (columns: %r)" % columns)
 
-        if not isinstance(value, basestring):
+        if not isinstance(value, six.string_types):
             raise ValueError("Invalid search value for LIKE condition. (value: %r)" % value)
 
         q   = []
@@ -92,13 +76,13 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
         for column in columns:
             q.append("%s LIKE ?" % column)
-            v.append("%" + value.replace('%', '\%').replace('_', '\_') + "%")
+            v.append("%" + value.replace('%', r'\%').replace('_', r'\_') + "%")
 
         return (" OR ".join(q), v)
 
     @staticmethod
     def _prepare_order(clause):
-        if isinstance(clause, basestring):
+        if isinstance(clause, six.string_types):
             clause = ((clause, 'ASC'),)
 
         if not isinstance(clause, (list, tuple)):
@@ -108,14 +92,14 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
     @staticmethod
     def _prepare_limit(row_count):
-        if not isinstance(row_count, (int, long)):
+        if not isinstance(row_count, six.integer_types):
             raise ValueError("Invalid row_count type. (row_count: %r)" % row_count)
 
         return " LIMIT %d" % row_count
 
     @staticmethod
     def _prepare_offset(offset):
-        if not isinstance(offset, (int, long)):
+        if not isinstance(offset, six.integer_types):
             raise ValueError("Invalid offset type. (offset: %r)" % offset)
 
         return " OFFSET %d" % offset

@@ -1,0 +1,16 @@
+Source: python-dwho
+Section: admin
+Priority: optional
+Maintainer: Adrien Delle Cave
+Uploaders: Adrien Delle Cave
+Build-Depends: debhelper (>= 7), dh-python, python (>= 2.7), python-setuptools
+Standards-Version: 3.9.4
+X-Python-Version: >= 2.7
+Homepage: https://github.com/decryptus/dwho
+
+Package: python-dwho
+Architecture: all
+Homepage: https://github.com/decryptus/dwho
+Depends: ${misc:Depends}, lsb-release, python-dev (>= 2.7), python-mako, python-pip, python-pyinotify, python-redis, python-requests, python-sonicprobe (>= 0.3.1), python-yaml
+Suggests: python-mysqldb, python-psycopg2, python-sqlite
+Description: DWho python libraries
