@@ -40,8 +40,8 @@ _INOTIFY        = None
 
 
 def stop(signum, stack_frame): # pylint: disable=unused-argument
-    for thread in DWHO_THREADS:
-        thread()
+    for t in DWHO_THREADS:
+        t()
 
 def get_server_id(conf):
     server_id = getfqdn()
@@ -54,6 +54,9 @@ def get_server_id(conf):
         raise DWhoConfigurationError("Invalid server_id: %r" % server_id)
 
     return server_id
+
+def get_inotify_instance():
+    return _INOTIFY
 
 def parse_conf(conf, load_creds = False):
     global _INOTIFY

@@ -6,4 +6,4 @@ pyinotify
 redis>=2.4.0
 requests>=2.0
 six>=1.12.0
-sonicprobe>=0.3.3
+sonicprobe>=0.3.4

@@ -1,3 +1,9 @@
+python-dwho (0.3.3) unstable; urgency=medium
+
+  * Added function get_inotify_instance.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 15 Nov 2019 18:22:43 +0100
+
 python-dwho (0.3.2) unstable; urgency=medium
 
   * Reviewed requirements.
