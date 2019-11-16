@@ -145,6 +145,14 @@ class DWhoInoEventPlugBase(DWhoInoPlugBase, DWhoInotifyEventBase):
 
         return self
 
+    def get_event_params(self):
+        if hasattr(self.event, 'plugins') \
+           and isinstance(self.event.plugins, dict) \
+           and self.PLUGIN_NAME in self.event.plugins:
+            return self.event.plugins[self.PLUGIN_NAME].copy()
+
+        return {}
+
     def _get_path_all_options(self):
         if not self.cfg_path \
            or self.cfg_path.path not in self.inopaths \
