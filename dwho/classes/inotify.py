@@ -67,6 +67,29 @@ class DWhoInotifyCfgPath(object): # pylint: disable=useless-object-inheritance,t
 
 
 class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
+    @staticmethod
+    def load_exclude_patterns(exclude_files):
+        r = set()
+
+        if isinstance(exclude_files, six.string_types):
+            exclude_files = [exclude_files]
+        elif not isinstance(exclude_files, list):
+            LOG.error("invalid exclude_files type. (exclude_files: %r)",
+                      exclude_files)
+            exclude_files = []
+
+        for x in exclude_files:
+            pattern = helpers.load_patterns_from_file(x)
+            if not pattern:
+                raise DWhoConfigurationError("unable to load exclude patterns from %r." % x)
+
+            r.update(pattern)
+
+        if r:
+            return pyinotify.ExcludeFilter(list(r))
+
+        return None
+
     def __call__(self, notifier, conf):
         if 'plugins' not in conf:
             conf['plugins'] = DEFAULT_CONFIG['plugins'].copy()
@@ -131,19 +154,8 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
                     if exclude_file in value['exclude_files']:
                         value['exclude_files'].remove(exclude_file)
 
-            value['exclude_patterns']   = set()
-
             if value['exclude_files']:
-                for x in value['exclude_files']:
-                    pattern = helpers.load_patterns_from_file(x)
-                    if not pattern:
-                        raise DWhoConfigurationError("Unable to load exclude patterns from %r. (path: %r)"
-                                                     % (x, path))
-
-                    value['exclude_patterns'].update(pattern)
-
-            if value['exclude_patterns']:
-                value['exclude_patterns'] = pyinotify.ExcludeFilter(list(value['exclude_patterns']))
+                value['exclude_patterns'] = self.load_exclude_patterns(value['exclude_files'])
             else:
                 value['exclude_patterns'] = None
 
