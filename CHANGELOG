@@ -1,8 +1,14 @@
+python-dwho (0.3.7) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 22 Nov 2019 09:59:14 +0100
+
 python-dwho (0.3.6) unstable; urgency=medium
 
-  * [RELEASE] Version: 0.3.6
+  * Reviewed requirements.
 
- -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 18 Nov 2019 00:08:25 +0100
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 22 Nov 2019 09:56:16 +0100
 
 python-dwho (0.3.5) unstable; urgency=medium
 
