@@ -6,6 +6,9 @@
 import abc
 import logging
 import re
+
+from socket import getfqdn
+
 import six
 
 from httpdis import httpdis
@@ -41,6 +44,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
         self.initialized    = False
         self.modconf        = None
         self.options        = None
+        self.server_id      = getfqdn()
 
     def _anonymous(self, request): # pylint: disable=unused-argument,no-self-use
         return
@@ -74,6 +78,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
 
         self.initialized = True
         self.config      = config
+        self.server_id   = config['general']['server_id']
 
         ref_general      = config['general']
         routes_list      = []

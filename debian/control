@@ -11,6 +11,6 @@ Homepage: https://github.com/decryptus/dwho
 Package: python-dwho
 Architecture: all
 Homepage: https://github.com/decryptus/dwho
-Depends: ${misc:Depends}, lsb-release, python-dev (>= 2.7~), python-mako, python-pip, python-pyinotify, python-redis, python-requests, python-sonicprobe (>= 0.3.6), python-yaml
+Depends: ${misc:Depends}, lsb-release, python-dev (>= 2.7~), python-mako, python-pip, python-pyinotify, python-redis, python-requests, python-sonicprobe (>= 0.3.8), python-yaml
 Suggests: python-mysqldb, python-psycopg2, python-sqlite
 Description: DWho python libraries
