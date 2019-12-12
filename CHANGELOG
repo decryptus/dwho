@@ -1,3 +1,21 @@
+python-dwho (0.3.11) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Dec 2019 12:00:22 +0100
+
+python-dwho (0.3.10) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Dec 2019 11:59:11 +0100
+
+python-dwho (0.3.9) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Wed, 11 Dec 2019 19:31:18 +0100
+
 python-dwho (0.3.8) unstable; urgency=medium
 
   * Reviewed requirements.

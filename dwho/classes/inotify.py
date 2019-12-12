@@ -81,7 +81,8 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
         for x in exclude_files:
             pattern = helpers.load_patterns_from_file(x)
             if not pattern:
-                raise DWhoConfigurationError("unable to load exclude patterns from %r." % x)
+                LOG.warning("unable to load exclude patterns from %r", x)
+                continue
 
             r.update(pattern)
 
