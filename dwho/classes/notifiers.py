@@ -298,7 +298,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
             try:
                 for x in iter(std.readline, b''):
                     if x != '':
-                        log(x)
+                        log(x.rstrip())
             except Exception as e:
                 LOG.exception(e)
                 break
