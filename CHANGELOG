@@ -1,3 +1,15 @@
+python-dwho (0.3.14) unstable; urgency=medium
+
+  * Fixed notifier.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 14 Dec 2019 14:25:18 +0100
+
+python-dwho (0.3.13) unstable; urgency=medium
+
+  * Fixed notifier timeout.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 14 Dec 2019 14:24:14 +0100
+
 python-dwho (0.3.12) unstable; urgency=medium
 
   * Added subproc notifier.

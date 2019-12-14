@@ -157,7 +157,7 @@ class DWhoNotifierHttp(DWhoNotifierBase):
         if not isinstance(tpl, dict):
             tpl = {}
 
-        timeout = tpl.get('timeout', cfg.get('timeout'), DEFAULT_TIMEOUT)
+        timeout = tpl.get('timeout', cfg.get('timeout', DEFAULT_TIMEOUT))
         verify  = tpl.get('verify', cfg.get('verify'))
 
         if tpl.get('method'):
@@ -319,7 +319,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
         tenv      = {}
         tenvfiles = []
         xvars     = {}
-        timeout   = tpl.get('timeout', cfg.get('timeout'), DEFAULT_TIMEOUT)
+        timeout   = tpl.get('timeout', cfg.get('timeout', DEFAULT_TIMEOUT))
 
         if isinstance(tpl.get('vars'), dict):
             xvars = copy.deepcopy(tpl['vars'])
