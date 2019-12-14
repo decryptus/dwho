@@ -4,6 +4,7 @@
 """dwho.classes.abstract"""
 
 import abc
+import re
 
 try:
     from threading import _get_ident as thread_get_ident
@@ -13,6 +14,124 @@ except ImportError:
 import six
 
 from sonicprobe.libs import anysql
+
+_RE_MATCH_OBJECT_FUNCS       = ('match', 'search')
+_PARAMS_DICT_MODIFIERS_MATCH = re.compile(r'^(?:(?P<modifiers>[\+\-~=%]+)\s)?(?P<key>.+)$').match
+_PARAM_REGEX_OPTS            = ('default', 'func', 'return', 'return_args')
+
+
+class DWhoAbstractHelper(object): # pylint: disable=useless-object-inheritance
+    __metaclass__ = abc.ABCMeta
+
+    @classmethod
+    def _parse_re_flags(cls, flags):
+        if isinstance(flags, int):
+            return flags
+
+        if isinstance(flags, list):
+            r = 0
+            for x in flags:
+                r |= cls._parse_re_flags(x)
+            return r
+
+        if isinstance(flags, six.string_types):
+            if flags.isdigit():
+                return int(flags)
+            return getattr(re, flags)
+
+        return 0
+
+    @classmethod
+    def _param_regex(cls, args, value):
+        args         = args.copy()
+        func         = args.get('func') or 'sub'
+        rfunc        = args.get('return')
+        rargs        = args.get('return_args')
+        is_match_obj = func in _RE_MATCH_OBJECT_FUNCS
+
+        if is_match_obj and not rfunc:
+            rfunc = 'group'
+            rargs = [1]
+
+        if is_match_obj and not rargs:
+            rargs = [1]
+
+        for x in _PARAM_REGEX_OPTS:
+            if x in args:
+                del args[x]
+
+        if 'pattern' in args:
+            flags = 0
+            if 'flags' in args:
+                flags = cls._parse_re_flags(args.pop('flags'))
+            func = getattr(re.compile(pattern = args.pop('pattern'),
+                                      flags = flags),
+                           func)
+        else:
+            func = getattr(re, func)
+
+        args['string'] = value
+        ret            = func(**args)
+
+        if ret is None:
+            return ''
+
+        if not rfunc:
+            return ret
+
+        if rargs:
+            return getattr(ret, rfunc)(*rargs)
+
+        return getattr(ret, rfunc)()
+
+    @classmethod
+    def _build_params_dict(cls, name, cfg, values = None, xvars = None, r = None):
+        if not isinstance(values, dict):
+            values = {}
+
+        if not isinstance(r, dict):
+            r = {}
+
+        if not cfg or not isinstance(cfg, list):
+            return r
+
+        fkwargs = {name: values.copy()}
+
+        if isinstance(xvars, dict):
+            fkwargs.update(xvars)
+
+        for elt in cfg:
+            ename = list(elt.keys())[0]
+            m = _PARAMS_DICT_MODIFIERS_MATCH(ename)
+            if m:
+                modifiers = m.group('modifiers') or '+'
+                key       = m.group('key')
+            else:
+                modifiers = '+'
+                key       = ename
+
+            if '+' in modifiers:
+                r[key] = elt[ename]
+            elif '-' in modifiers:
+                if key not in r:
+                    continue
+                elif elt[ename] in (None, r[key]):
+                    del r[key]
+            elif '~' in modifiers:
+                args = elt[ename]
+
+                if key not in r:
+                    r[key] = args.get('default') or ''
+                else:
+                    r[key] = cls._param_regex(args, r[key])
+            elif '=' in modifiers:
+                if key in r:
+                    r[elt[ename]] = r[key]
+
+            if '{' in modifiers and '}' in modifiers:
+                r[key] = r[key].format(**fkwargs)
+
+        return r
 
 
 class DWhoAbstractDB(object): # pylint: disable=useless-object-inheritance
