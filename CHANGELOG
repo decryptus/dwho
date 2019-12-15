@@ -1,3 +1,9 @@
+python-dwho (0.3.16) unstable; urgency=medium
+
+  * Added custom_file argument in config.load_conf.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sun, 15 Dec 2019 11:07:47 +0100
+
 python-dwho (0.3.15) unstable; urgency=medium
 
   * Fixed notifier log for subproc.

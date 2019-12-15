@@ -43,10 +43,11 @@ def stop(signum, stack_frame): # pylint: disable=unused-argument
     for t in DWHO_THREADS:
         t()
 
-def get_server_id(conf):
+def get_server_id(conf = None):
     server_id = getfqdn()
 
-    if 'general' in conf \
+    if isinstance(conf, dict) \
+       and 'general' in conf \
        and conf['general'].get('server_id'):
         server_id = conf['general']['server_id']
 
@@ -123,7 +124,7 @@ def parse_conf(conf, load_creds = False):
 
     return conf
 
-def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False, envvar = None):
+def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False, envvar = None, custom_file = None):
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
@@ -133,7 +134,17 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
         with open(xfile, 'r') as f:
             conf = helpers.load_yaml(f)
 
-        conf['_config_directory'] = os.path.dirname(os.path.abspath(xfile))
+        config_directory = os.path.dirname(os.path.abspath(xfile))
+        conf['_config_directory'] = config_directory
+
+        if custom_file:
+            conf = helpers.merge(
+                helpers.load_conf_yaml_file(
+                    custom_file,
+                    config_directory),
+                conf)
+
+        conf['_config_directory'] = config_directory
     elif envvar and os.environ.get(envvar):
         c = StringIO(os.environ[envvar])
         conf = helpers.load_yaml(c.getvalue())
