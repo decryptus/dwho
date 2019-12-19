@@ -1,3 +1,9 @@
+python-dwho (0.3.19) unstable; urgency=medium
+
+  * Fixed subproc notifier.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 19 Dec 2019 17:55:15 +0100
+
 python-dwho (0.3.18) unstable; urgency=medium
 
   * Reviewed requirements.

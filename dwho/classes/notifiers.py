@@ -232,6 +232,10 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                     LOG.error("invalid template argument %r for notifier: %r", x, name)
                     return None
 
+                if '{' in x and '}' in x:
+                    x = x.format(**xvars)
+                r.append(x)
+
         return r
 
     @staticmethod
