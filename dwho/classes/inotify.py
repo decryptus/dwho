@@ -118,7 +118,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             if 'plugins' not in value:
                 value['plugins'] = conf['plugins'].copy()
 
-            value['event_masks']    = 0
+            value['event_masks'] = 0
 
             if 'events' not in value:
                 value['events'] = list(conf['events'])
@@ -161,7 +161,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
                 value['exclude_patterns'] = None
 
         for path, value in six.iteritems(conf['paths']):
-            plugins     = []
+            plugins = []
             if value['plugins']:
                 for plugin, options in six.iteritems(value['plugins']):
                     if not options:
