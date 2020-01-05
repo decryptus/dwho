@@ -441,11 +441,11 @@ class DWhoInotify(threading.Thread):
         return None
 
     def __add_watch(self, cfg_path):
-        LOG.debug("Add watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
-                  cfg_path.path,
-                  cfg_path.event_mask,
-                  cfg_path.plugins,
-                  cfg_path.do_glob)
+        LOG.info("Add watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
+                 cfg_path.path,
+                 cfg_path.event_mask,
+                 cfg_path.plugins,
+                 cfg_path.do_glob)
 
         try:
             wdd = self.wm.add_watch(cfg_path.path,
@@ -472,11 +472,11 @@ class DWhoInotify(threading.Thread):
         if cfg_path.path not in self.cfg_paths:
             return
 
-        LOG.debug("Remove watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
-                  cfg_path.path,
-                  cfg_path.event_mask,
-                  cfg_path.plugins,
-                  cfg_path.do_glob)
+        LOG.info("Remove watch. (path: %r, mask: %r, plugins: %r, glob: %r)",
+                 cfg_path.path,
+                 cfg_path.event_mask,
+                 cfg_path.plugins,
+                 cfg_path.do_glob)
 
         try:
             self.wm.rm_watch(cfg_path.path, rec = True, quiet = False)

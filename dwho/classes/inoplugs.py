@@ -6,9 +6,10 @@
 import abc
 import logging
 import os
-import six
 
 from socket import getfqdn
+
+import six
 
 from dwho.classes.abstract import DWhoAbstractDB
 
