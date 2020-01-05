@@ -112,13 +112,14 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             xvars = {}
 
         nvars                = copy.deepcopy(xvars)
-        nvars['_VARS_']      = copy.deepcopy(xvars)
-        nvars['_SERVER_ID_'] = self.server_id
-        nvars['_TIMESTAMP_'] = time.time()
         nvars['_ENV_']       = copy.deepcopy(os.environ)
-        nvars['_TIME_']      = datetime.now()
         nvars['_GMTIME_']    = datetime.utcnow()
+        nvars['_HOSTNAME_']  = getfqdn()
+        nvars['_SERVER_ID_'] = self.server_id
+        nvars['_TIME_']      = datetime.now()
+        nvars['_TIMESTAMP_'] = time.time()
         nvars['_UUID_']      = "%s" % uuid.uuid4()
+        nvars['_VARS_']      = copy.deepcopy(xvars)
 
         for name, notification in six.iteritems(self.notifications):
             if not notification['cfg']['general'].get('enabled', True):
@@ -196,6 +197,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
     @staticmethod
     def _set_default_env(env, xvars):
         env.update({'DWHO_NOTIFIER':           'true',
+                    'DWHO_NOTIFIER_HOSTNAME':  "%s" % getfqdn(),
                     'DWHO_NOTIFIER_GMTIME':    "%s" % xvars['_GMTIME_'],
                     'DWHO_NOTIFIER_TIME':      "%s" % xvars['_TIME_'],
                     'DWHO_NOTIFIER_TIMESTAMP': "%s" % xvars['_TIMESTAMP_'],

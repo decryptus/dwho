@@ -23,6 +23,11 @@ class DWhoInoPlugs(dict):
             raise TypeError("Invalid Inotify Plugin class. (class: %r)" % plugin)
         return dict.__setitem__(self, plugin.PLUGIN_NAME, plugin)
 
+    def unregister(self, plugin):
+        if not isinstance(plugin, DWhoInoPlugBase):
+            raise TypeError("Invalid Inotify Plugin class. (class: %r)" % plugin)
+        return dict.__delitem__(self, plugin.PLUGIN_NAME)
+
 INOPLUGS = DWhoInoPlugs()
 
 

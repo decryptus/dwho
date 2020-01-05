@@ -508,7 +508,9 @@ class DWhoInotify(threading.Thread):
 
     def stop(self):
         self.killed = True
-        self.workerpool.killall(0)
+        self.scan_event.set()
+        if self.workerpool:
+            self.workerpool.killall(0)
 
 
 class DWhoInotifyPlugs(threading.Thread):
