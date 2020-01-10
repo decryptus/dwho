@@ -37,11 +37,31 @@ SUBDIR_CHARS    = "abcdef0123456789"
 DWHO_SHARED     = keystore.Keystore()
 DWHO_THREADS    = []
 _INOTIFY        = None
+_SOFTNAME       = ""
+_SOFTVER        = ""
 
 
 def stop(signum, stack_frame): # pylint: disable=unused-argument
     for t in DWHO_THREADS:
         t()
+
+def set_softname(name):
+    global _SOFTNAME
+
+    if not _SOFTNAME and helpers.has_len(name):
+        _SOFTNAME = name
+
+def get_softname():
+    return _SOFTNAME
+
+def set_softver(version):
+    global _SOFTVER
+
+    if not _SOFTVER and has_len.has_len(version):
+        _SOFTVER = version
+
+def get_softver():
+    return _SOFTVER
 
 def get_server_id(conf = None):
     server_id = getfqdn()
