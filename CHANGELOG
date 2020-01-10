@@ -1,3 +1,9 @@
+python-dwho (0.3.22) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 10 Jan 2020 12:56:45 +0100
+
 python-dwho (0.3.21) unstable; urgency=medium
 
   * Changed loglevel in inotify.
