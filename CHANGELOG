@@ -1,3 +1,9 @@
+python-dwho (0.3.24) unstable; urgency=medium
+
+  * Reviewed option max_workers parsing. 
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sun, 12 Jan 2020 17:49:10 +0100
+
 python-dwho (0.3.23) unstable; urgency=medium
 
   * Reviewed requirements.

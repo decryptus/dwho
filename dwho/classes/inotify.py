@@ -379,9 +379,12 @@ class DWhoInotify(threading.Thread):
 
     def init(self, config):
         self.config     = config
-        self.workerpool = WorkerPool(max_workers = int(config['inotify'].get('max_workers') or MAX_WORKERS),
+        self.workerpool = WorkerPool(max_workers = helpers.get_nb_workers(config['inotify'].get('max_workers'),
+                                                                          xmin    = 1,
+                                                                          default = MAX_WORKERS),
                                      life_time   = config['inotify'].get('worker_lifetime'),
-                                     name        = 'inoworker')
+                                     name        = 'inoworker',
+                                     max_tasks   = config['inotify'].get('max_tasks'))
 
         return self
 

@@ -57,7 +57,7 @@ def get_softname():
 def set_softver(version):
     global _SOFTVER
 
-    if not _SOFTVER and has_len.has_len(version):
+    if not _SOFTVER and helpers.has_len(version):
         _SOFTVER = version
 
 def get_softver():
@@ -94,8 +94,9 @@ def parse_conf(conf, load_creds = False):
     if not conf['general'].get('max_body_size'):
         conf['general']['max_body_size'] = MAX_BODY_SIZE
 
-    if not conf['general'].get('max_workers'):
-        conf['general']['max_workers'] = MAX_WORKERS
+    conf['general']['max_workers'] = helpers.get_nb_workers(conf['general'].get('max_workers'),
+                                                            xmin    = 1,
+                                                            default = MAX_WORKERS)
 
     if not conf['general'].get('max_requests'):
         conf['general']['max_requests'] = MAX_REQUESTS
