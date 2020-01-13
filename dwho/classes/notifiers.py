@@ -20,13 +20,15 @@ from mako.template import Template
 
 from dotenv.main import dotenv_values
 
+from sonicprobe import helpers
 from sonicprobe.libs import urisup
+from sonicprobe.libs.workerpool import WorkerPool
 
 import requests
 import six
-import yaml
 
 from dwho.adapters.redis import DWhoAdapterRedis
+from dwho.config import get_softname, get_softver
 from dwho.classes.abstract import DWhoAbstractHelper
 
 
@@ -62,6 +64,8 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
     def __init__(self, server_id = None, config_path = None):
         self.notifications  = {}
         self.server_id      = server_id or getfqdn()
+        self.workerpool     = None
+        self._lock          = threading.Lock()
 
         if config_path:
             self.load(config_path)
@@ -83,13 +87,13 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             f = None
             with open(xpath, 'r') as f:
                 name = os.path.splitext(os.path.basename(xpath))[0]
-                cfg  = yaml.load(f)
+                cfg  = helpers.load_yaml(f)
 
                 self.notifications[name] = {'cfg': cfg,
                                             'tpl': None,
                                             'notifiers': []}
 
-                if 'template' in cfg['general']:
+                if cfg['general'].get('template') and os.path.isfile(cfg['general']['template']):
                     with open(cfg['general']['template'], 'r') as t:
                         self.notifications[name]['tpl'] = t.read()
 
@@ -107,7 +111,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         self.notifications = {}
         return self
 
-    def __call__(self, xvars = None):
+    def _run(self, xvars = None):
         if not xvars:
             xvars = {}
 
@@ -116,10 +120,16 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         nvars['_GMTIME_']    = datetime.utcnow()
         nvars['_HOSTNAME_']  = getfqdn()
         nvars['_SERVER_ID_'] = self.server_id
+        nvars['_SOFTNAME_']  = get_softname()
+        nvars['_SOFTVER_']   = get_softver()
         nvars['_TIME_']      = datetime.now()
         nvars['_TIMESTAMP_'] = time.time()
         nvars['_UUID_']      = "%s" % uuid.uuid4()
         nvars['_VARS_']      = copy.deepcopy(xvars)
+
+        if not self.workerpool:
+            self.workerpool = WorkerPool(max_workers = 1,
+                                         name = 'notifiers')
 
         for name, notification in six.iteritems(self.notifications):
             if not notification['cfg']['general'].get('enabled', True):
@@ -138,7 +148,29 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             uri                   = urisup.uri_help_split(cfg['general']['uri'])
 
             for notifier in notification['notifiers']:
-                notifier(name, cfg, uri, nvars, tpl)
+                if cfg['general'].get('async'):
+                    self.workerpool.run_args(notifier,
+                                             _name_ = "notifier:%s" % name,
+                                             name   = name,
+                                             cfg    = cfg,
+                                             uri    = uri,
+                                             nvars  = nvars,
+                                             tpl    = tpl)
+                else:
+                    notifier(name, cfg, uri, nvars, tpl)
+
+        while True:
+            if self.workerpool.killable():
+                self.workerpool.killall(0)
+                self.workerpool = None
+            time.sleep(0.5)
+
+    def __call__(self, xvars = None):
+        with self._lock:
+            try:
+                self._run(xvars)
+            except Exception as e:
+                LOG.exception(e)
 
 
 class DWhoNotifierBase(DWhoAbstractHelper): # pylint: disable=useless-object-inheritance
@@ -153,7 +185,7 @@ class DWhoNotifierHttp(DWhoNotifierBase):
     SCHEME = ('http', 'https')
 
     def __call__(self, name, cfg, uri, nvars, tpl = None):
-        (method, headers, payload) = ('post', {}, {})
+        (method, auth, headers, payload) = ('post', None, {}, {})
 
         if not isinstance(tpl, dict):
             tpl = {}
@@ -167,6 +199,9 @@ class DWhoNotifierHttp(DWhoNotifierBase):
             else:
                 raise ValueError("invalid HTTP method: %r" % tpl['method'])
 
+        if isinstance(tpl.get('auth'), dict):
+            auth = tpl['auth']
+
         if 'headers' in tpl:
             headers = tpl['headers']
 
@@ -175,6 +210,7 @@ class DWhoNotifierHttp(DWhoNotifierBase):
 
         try:
             r = getattr(requests, method)(cfg['general']['uri'],
+                                          auth    = auth,
                                           headers = headers,
                                           data    = payload,
                                           timeout = timeout,
@@ -191,6 +227,28 @@ class DWhoNotifierHttp(DWhoNotifierBase):
         return None
 
 
+class DWhoNotifierRedis(DWhoNotifierBase):
+    SCHEME = ('redis',)
+
+    def __call__(self, name, cfg, uri, nvars, tpl):
+        config = {'general':
+                  {'redis':
+                   {'notifier': cfg['general'].get('options') or {}}}}
+        config['general']['redis']['notifier']['url'] = cfg['general']['uri']
+
+        if not tpl or not isinstance(tpl, dict):
+            LOG.error("missing redis template for %r", name)
+            return
+
+        try:
+            adapter_redis = DWhoAdapterRedis(config, prefix = 'notifier')
+            adapter_redis.set_key(tpl['key'], json.dumps(tpl['value']))
+        except Exception as e:
+            LOG.error("unable to push notification %r: %r", name, e)
+        else:
+            LOG.info("notification pushed: %r", name)
+
+
 class DWhoNotifierSubprocess(DWhoNotifierBase):
     SCHEME = ('subproc',)
 
@@ -202,6 +260,8 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                     'DWHO_NOTIFIER_TIME':      "%s" % xvars['_TIME_'],
                     'DWHO_NOTIFIER_TIMESTAMP': "%s" % xvars['_TIMESTAMP_'],
                     'DWHO_NOTIFIER_SERVER_ID': "%s" % xvars['_SERVER_ID_'],
+                    'DWHO_NOTIFIER_SOFTNAME':  "%s" % xvars['_SOFTNAME_'],
+                    'DWHO_NOTIFIER_SOFTVER':   "%s" % xvars['_SOFTVER_'],
                     'DWHO_NOTIFIER_UUID':      "%s" % xvars['_UUID_']})
 
         return env
@@ -411,31 +471,9 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
             pass
 
 
-class DWhoNotifierRedis(DWhoNotifierBase):
-    SCHEME = ('redis',)
-
-    def __call__(self, name, cfg, uri, nvars, tpl):
-        config = {'general':
-                  {'redis':
-                   {'notifier': cfg['general'].get('options') or {}}}}
-        config['general']['redis']['notifier']['url'] = cfg['general']['uri']
-
-        if not tpl or not isinstance(tpl, dict):
-            LOG.error("missing redis template for %r", name)
-            return
-
-        try:
-            adapter_redis = DWhoAdapterRedis(config, prefix = 'notifier')
-            adapter_redis.set_key(tpl['key'], json.dumps(tpl['value']))
-        except Exception as e:
-            LOG.error("unable to push notification %r: %r", name, e)
-        else:
-            LOG.info("notification pushed: %r", name)
-
-
 if __name__ != "__main__":
     def _start():
         NOTIFIERS.register(DWhoNotifierHttp())
-        NOTIFIERS.register(DWhoNotifierSubprocess())
         NOTIFIERS.register(DWhoNotifierRedis())
+        NOTIFIERS.register(DWhoNotifierSubprocess())
     _start()

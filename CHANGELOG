@@ -1,3 +1,15 @@
+python-dwho (0.3.26) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 13 Jan 2020 09:46:24 +0100
+
+python-dwho (0.3.25) unstable; urgency=medium
+
+  * Added option async for notifiers.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 13 Jan 2020 09:45:40 +0100
+
 python-dwho (0.3.24) unstable; urgency=medium
 
   * Reviewed option max_workers parsing. 
