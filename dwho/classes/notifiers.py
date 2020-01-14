@@ -160,7 +160,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                     notifier(name, cfg, uri, nvars, tpl)
 
         while True:
-            if self.workerpool.killable():
+            if self.workerpool and self.workerpool.killable():
                 self.workerpool.killall(0)
                 self.workerpool = None
             time.sleep(0.5)
