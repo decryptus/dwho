@@ -198,7 +198,7 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
         # Therefore even wd are indexed with bytes string and not with
         # unicode paths.
         if isinstance(path, six.text_type):
-            path = path.encode(sys.getfilesystemencoding())
+            path = six.ensure_str(path, sys.getfilesystemencoding())
         return os.path.normpath(path)
 
     def __add_watch(self, path, mask, proc_fun, auto_add, exclude_filter):

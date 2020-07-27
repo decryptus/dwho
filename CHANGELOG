@@ -1,3 +1,9 @@
+python-dwho (0.3.30) unstable; urgency=medium
+
+  * Fixed inotify encoding on py3.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 27 Jul 2020 02:54:38 +0200
+
 python-dwho (0.3.29) unstable; urgency=medium
 
   * Reviewed requirements.
