@@ -9,7 +9,7 @@ import os
 
 from socket import getfqdn
 
-import six
+from six import iterkeys
 
 from dwho.classes.abstract import DWhoAbstractDB
 
@@ -121,7 +121,7 @@ class DWhoInoPluginSQLBase(DWhoInoPlugBase, DWhoAbstractDB):
     def init(self, config):
         DWhoInoPlugBase.init(self, config)
 
-        for key in six.iterkeys(config['general']):
+        for key in iterkeys(config['general']):
             if not key.startswith('db_uri_'):
                 continue
             name = key[7:]

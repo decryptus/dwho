@@ -5,7 +5,8 @@
 
 import abc
 import logging
-import six
+
+from six import integer_types, iteritems, string_types
 
 from dwho.classes.abstract import DWhoAbstractDB
 
@@ -50,7 +51,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         q   = []
         v   = []
 
-        for key, value in six.iteritems(elements):
+        for key, value in iteritems(elements):
             if isinstance(value, (list, tuple)):
                 q.append(("%s IN(" + ", ".join(["?"] * len(value)) + ") ") % key)
                 v.extend(value)
@@ -68,7 +69,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         if not isinstance(columns, (list, tuple)):
             raise ValueError("Invalid columns for LIKE condition. (columns: %r)" % columns)
 
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, string_types):
             raise ValueError("Invalid search value for LIKE condition. (value: %r)" % value)
 
         q   = []
@@ -82,7 +83,7 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
     @staticmethod
     def _prepare_order(clause):
-        if isinstance(clause, six.string_types):
+        if isinstance(clause, string_types):
             clause = ((clause, 'ASC'),)
 
         if not isinstance(clause, (list, tuple)):
@@ -92,14 +93,14 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
     @staticmethod
     def _prepare_limit(row_count):
-        if not isinstance(row_count, six.integer_types):
+        if not isinstance(row_count, integer_types):
             raise ValueError("Invalid row_count type. (row_count: %r)" % row_count)
 
         return " LIMIT %d" % row_count
 
     @staticmethod
     def _prepare_offset(offset):
-        if not isinstance(offset, six.integer_types):
+        if not isinstance(offset, integer_types):
             raise ValueError("Invalid offset type. (offset: %r)" % offset)
 
         return " OFFSET %d" % offset

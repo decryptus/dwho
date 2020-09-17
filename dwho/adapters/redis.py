@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-import six
+from six import iteritems, iterkeys
 from six.moves.urllib.parse import urlparse, parse_qs
 
 from redis import Redis
@@ -20,7 +20,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
             self.load(prefix)
 
     def load(self, prefix = None):
-        for name in six.iterkeys(self.config['general']['redis']):
+        for name in iterkeys(self.config['general']['redis']):
             if not prefix or name.startswith(prefix):
                 self.connect(name)
 
@@ -34,7 +34,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
             return self.servers[name]
 
         has_from_url = hasattr(Redis, 'from_url')
-        for key, value in six.iteritems(self.config['general']['redis'][name]):
+        for key, value in iteritems(self.config['general']['redis'][name]):
             if key != 'url':
                 self.servers[name]['options'][key] = value
                 continue
@@ -62,7 +62,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].ping()
 
@@ -75,11 +75,11 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
             servers = self.servers
 
         if expire is not None:
-            for name, server in six.iteritems(servers):
+            for name, server in iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].setex(name = key, time = expire, value = val)
         else:
-            for name, server in six.iteritems(servers):
+            for name, server in iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].set(key, val)
 
@@ -89,7 +89,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 return server['conn'].get(key)
@@ -105,7 +105,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not isinstance(key, (list, tuple)):
             key = [key]
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].delete(*key)
 
@@ -120,7 +120,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not isinstance(key, (list, tuple)):
             key = [key]
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].exists(*key)
 
@@ -132,7 +132,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 r[name] = server['conn'].expire(key, xtime)
@@ -146,12 +146,12 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
             servers = self.servers
 
         if expire is not None:
-            for name, server in six.iteritems(servers):
+            for name, server in iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].hset(key, field, val)
                     server['conn'].expire(key, expire)
         else:
-            for name, server in six.iteritems(servers):
+            for name, server in iteritems(servers):
                 if not prefix or name.startswith(prefix):
                     r[name] = server['conn'].hset(key, field, val)
 
@@ -161,7 +161,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if (not prefix or name.startswith(prefix)) \
                and server['conn'].exists(key):
                 return server['conn'].hget(key, field)
@@ -177,7 +177,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not isinstance(field, (list, tuple)):
             field = [field]
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].hdel(key, *field)
 
@@ -187,7 +187,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 return server['conn'].exists(key)
 
@@ -199,7 +199,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].keys(pattern)
 
@@ -214,7 +214,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not isinstance(member, (list, tuple)):
             member = [member]
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].sadd(key, *member)
 
@@ -229,7 +229,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not isinstance(member, (list, tuple)):
             member = [member]
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].srem(key, *member)
 
@@ -245,7 +245,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
         if not servers:
             servers = self.servers
 
-        for name, server in six.iteritems(servers):
+        for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
                 r[name] = server['conn'].sort(name   = key,
                                               start  = start,

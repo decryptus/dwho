@@ -12,7 +12,7 @@ import threading
 
 import pyinotify
 
-import six
+from six import ensure_str, iterkeys, iteritems, string_types, text_type
 from six.moves import queue as _queue
 
 from sonicprobe import helpers
@@ -71,7 +71,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
     def load_exclude_patterns(exclude_files):
         r = set()
 
-        if isinstance(exclude_files, six.string_types):
+        if isinstance(exclude_files, string_types):
             exclude_files = [exclude_files]
         elif not isinstance(exclude_files, list):
             LOG.error("invalid exclude_files type. (exclude_files: %r)",
@@ -99,7 +99,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             conf['events'] = list(DEFAULT_CONFIG['events'])
 
         if 'exclude_files' in conf:
-            if isinstance(conf['exclude_files'], six.string_types):
+            if isinstance(conf['exclude_files'], string_types):
                 conf['exclude_files'] = [conf['exclude_files']]
             elif not isinstance(conf['exclude_files'], list):
                 LOG.error('Invalid %s type. (%s: %r, section: %r)',
@@ -114,7 +114,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
         if 'paths' not in conf or not isinstance(conf['paths'], dict):
             raise DWhoConfigurationError("Missing paths configuration")
 
-        for path, value in six.iteritems(conf['paths']):
+        for path, value in iteritems(conf['paths']):
             if 'plugins' not in value:
                 value['plugins'] = conf['plugins'].copy()
 
@@ -142,7 +142,7 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             if 'exclude_files' not in value:
                 value['exclude_files'] = list(conf['exclude_files'])
             else:
-                if isinstance(value['exclude_files'], six.string_types):
+                if isinstance(value['exclude_files'], string_types):
                     value['exclude_files'] = [value['exclude_files']]
                 elif not isinstance(value['exclude_files'], list):
                     raise DWhoConfigurationError("Invalid exclude_files type. (exclude_files: %r, path: %r)"
@@ -160,10 +160,10 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             else:
                 value['exclude_patterns'] = None
 
-        for path, value in six.iteritems(conf['paths']):
+        for path, value in iteritems(conf['paths']):
             plugins = []
             if value['plugins']:
-                for plugin, options in six.iteritems(value['plugins']):
+                for plugin, options in iteritems(value['plugins']):
                     if not options:
                         continue
                     if plugin in INOPLUGS:
@@ -197,8 +197,8 @@ class DWhoInotifyWatchManager(pyinotify.WatchManager):
         # it receives an ctypes.create_unicode_buffer instance as argument.
         # Therefore even wd are indexed with bytes string and not with
         # unicode paths.
-        if isinstance(path, six.text_type):
-            path = six.ensure_str(path, sys.getfilesystemencoding())
+        if isinstance(path, text_type):
+            path = ensure_str(path, sys.getfilesystemencoding())
         return os.path.normpath(path)
 
     def __add_watch(self, path, mask, proc_fun, auto_add, exclude_filter):
@@ -404,7 +404,7 @@ class DWhoInotify(threading.Thread):
         if name in pyinotify.EventsCodes.ALL_FLAGS:
             return pyinotify.EventsCodes.ALL_FLAGS.get(name)
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, string_types):
             return None
 
         uname   = name.upper()
@@ -431,7 +431,7 @@ class DWhoInotify(threading.Thread):
 
         try:
             cfg_paths = self.cfg_paths.copy()
-            for wd_path in six.iterkeys(cfg_paths):
+            for wd_path in iterkeys(cfg_paths):
                 if os.path.commonprefix([path, wd_path]) == wd_path.rstrip(os.sep):
                     LOG.debug("path: %r, wd_path: %r, common: %r",
                               path,
@@ -459,7 +459,7 @@ class DWhoInotify(threading.Thread):
                                     do_glob         = cfg_path.do_glob,
                                     exclude_filter  = cfg_path.exclude_filter)
 
-            for wpath, wcode in six.iteritems(wdd):
+            for wpath, wcode in iteritems(wdd):
                 if wcode == -2:
                     LOG.debug("Path excluded. (path: %r, code: %r)", wpath, wcode)
                 elif wcode < 0:

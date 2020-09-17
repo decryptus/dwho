@@ -25,7 +25,8 @@ from sonicprobe.libs import urisup
 from sonicprobe.libs.workerpool import WorkerPool
 
 import requests
-import six
+
+from six import iteritems, string_types
 
 from dwho.adapters.redis import DWhoAdapterRedis
 from dwho.config import get_softname, get_softver
@@ -43,7 +44,7 @@ class DWhoNotifiers(dict):
         if not isinstance(notifier, DWhoNotifierBase):
             raise TypeError("Invalid Notifier class. (class: %r)" % notifier)
 
-        if isinstance(notifier.SCHEME, six.string_types):
+        if isinstance(notifier.SCHEME, string_types):
             schemes = [notifier.SCHEME]
         else:
             schemes = notifier.SCHEME
@@ -131,7 +132,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             self.workerpool = WorkerPool(max_workers = 1,
                                          name = 'notifiers')
 
-        for name, notification in six.iteritems(self.notifications):
+        for name, notification in iteritems(self.notifications):
             if not notification['cfg']['general'].get('enabled', True):
                 continue
 
@@ -276,7 +277,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                 return None
 
             for x in cargs:
-                if not isinstance(x, six.string_types):
+                if not isinstance(x, string_types):
                     LOG.error("invalid configuration argument %r for notifier: %r", x, name)
                     return None
 
@@ -290,7 +291,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                 return None
 
             for x in targs:
-                if not isinstance(x, six.string_types):
+                if not isinstance(x, string_types):
                     LOG.error("invalid template argument %r for notifier: %r", x, name)
                     return None
 
@@ -325,7 +326,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                 LOG.warning("invalid template envfiles for notifier: %r", name)
                 return r
 
-            for key, val in six.iteritems(self._load_envfile(name, tenvfiles)):
+            for key, val in iteritems(self._load_envfile(name, tenvfiles)):
                 env.append({key: val})
 
         if cenvfiles:
@@ -333,12 +334,12 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                 LOG.warning("invalid configuration envfiles for notifier: %r", name)
                 return r
 
-            for key, val in six.iteritems(self._load_envfile(name, cenvfiles)):
+            for key, val in iteritems(self._load_envfile(name, cenvfiles)):
                 env.append({key: val})
 
         if cenv:
             if isinstance(cenv, dict):
-                for key, val in six.iteritems(cenv):
+                for key, val in iteritems(cenv):
                     env.append({key: val})
             elif not isinstance(cenv, list):
                 LOG.warning("invalid configuration env for notifier: %r", name)

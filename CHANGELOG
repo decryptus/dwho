@@ -1,3 +1,9 @@
+python-dwho (0.3.31) unstable; urgency=medium
+
+  * Reviewed six importation.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Wed, 16 Sep 2020 14:57:07 +0200
+
 python-dwho (0.3.30) unstable; urgency=medium
 
   * Fixed inotify encoding on py3.

@@ -4,7 +4,8 @@
 """dwho.helpers.crypto"""
 
 import base64
-import six
+
+from six import string_types
 
 try:
     from six.moves import cPickle as pickle
@@ -26,7 +27,7 @@ class DWhoCryptoHelper(object): # pylint: disable=useless-object-inheritance
 
     @staticmethod
     def _normalize_key(secret_key):
-        if not isinstance(secret_key, six.string_types):
+        if not isinstance(secret_key, string_types):
             return None
 
         xlen = len(secret_key)

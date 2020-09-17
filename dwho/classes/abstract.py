@@ -11,7 +11,7 @@ try:
 except ImportError:
     from threading import get_ident as thread_get_ident
 
-import six
+from six import string_types
 
 from sonicprobe.libs import anysql
 
@@ -34,7 +34,7 @@ class DWhoAbstractHelper(object): # pylint: disable=useless-object-inheritance
                 r |= cls._parse_re_flags(x)
             return r
 
-        if isinstance(flags, six.string_types):
+        if isinstance(flags, string_types):
             if flags.isdigit():
                 return int(flags)
             return getattr(re, flags)
@@ -195,7 +195,7 @@ class DWhoAbstractDB(object): # pylint: disable=useless-object-inheritance
 
         if not isinstance(res, object) \
            or res is None \
-           or isinstance(res, six.string_types):
+           or isinstance(res, string_types):
             return res
 
         return "%s" % res

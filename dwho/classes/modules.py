@@ -9,7 +9,7 @@ import re
 
 from socket import getfqdn
 
-import six
+from six import iterkeys, itervalues, string_types
 
 from httpdis import httpdis
 from httpdis.httpdis import HttpResponse
@@ -108,7 +108,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
         return self
 
     def _register_commands(self, routes):
-        for value in six.itervalues(routes):
+        for value in itervalues(routes):
             LOG.debug("Route: %r", value)
             cmd_args    = {'op':            value.get('op') or 'GET',
                            'safe_init':     None,
@@ -140,7 +140,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
                 else:
                     cmd_args['root'] = value['root']
 
-            if isinstance(cmd_args['op'], six.string_types):
+            if isinstance(cmd_args['op'], string_types):
                 cmd_args['op'] = [cmd_args['op']]
 
             for i, op in enumerate(cmd_args['op']):
@@ -174,7 +174,7 @@ class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
     def init(self, config):
         DWhoModuleBase.init(self, config)
 
-        for key in six.iterkeys(config['general']):
+        for key in iterkeys(config['general']):
             if not key.startswith('db_uri_'):
                 continue
             name = key[7:]
@@ -214,7 +214,7 @@ class DWhoModuleWebBase(DWhoModuleBase):
 
         if self.modconf:
             if 'web_directories' in self.modconf:
-                if isinstance(self.modconf['web_directories'], six.string_types):
+                if isinstance(self.modconf['web_directories'], string_types):
                     self.modconf['web_directories'] = [self.modconf['web_directories']]
                 elif not isinstance(self.modconf['web_directories'], list):
                     LOG.error('Invalid web_directories type. (web_directories: %r, module: %r)',

@@ -11,7 +11,7 @@ from logging.handlers import WatchedFileHandler
 
 from socket import getfqdn
 
-import six
+from six import iterkeys, iteritems, string_types
 try:
     from six.moves import cStringIO as StringIO
 except ImportError:
@@ -124,7 +124,7 @@ def parse_conf(conf, load_creds = False):
         conf['general']['auth_basic'] = None
 
     if 'web_directories' in conf['general']:
-        if isinstance(conf['general']['web_directories'], six.string_types):
+        if isinstance(conf['general']['web_directories'], string_types):
             conf['general']['web_directories'] = [conf['general']['web_directories']]
         elif not isinstance(conf['general']['web_directories'], list):
             LOG.error('Invalid %s type. (%s: %r, section: %r)',
@@ -177,11 +177,11 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     else:
         conf = parse_conf(conf, load_creds)
 
-    for name, module in six.iteritems(MODULES):
+    for name, module in iteritems(MODULES):
         LOG.info("module init: %r", name)
         module.init(conf)
 
-    for name, plugin in six.iteritems(PLUGINS):
+    for name, plugin in iteritems(PLUGINS):
         LOG.info("plugin init: %r", name)
         plugin.init(conf)
 
@@ -195,7 +195,7 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     if _INOTIFY:
         _INOTIFY.init(conf)
 
-        for name, inoplug in six.iteritems(INOPLUGS):
+        for name, inoplug in iteritems(INOPLUGS):
             LOG.info("inoplug init: %r", name)
             inoplug.init(conf)
             LOG.info("inoplug safe_init: %r", name)
@@ -205,7 +205,7 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     if not options or not isinstance(options, object):
         return conf
 
-    for def_option in six.iterkeys(get_default_options()):
+    for def_option in iterkeys(get_default_options()):
         if getattr(options, def_option, None) is None \
            and def_option in conf['general']:
             setattr(options, def_option, conf['general'][def_option])
@@ -215,19 +215,19 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     return options
 
 def load_credentials(credentials, config_dir = None):
-    if isinstance(credentials, six.string_types):
+    if isinstance(credentials, string_types):
         return helpers.section_from_yaml_file(credentials, config_dir = config_dir)
 
     return credentials
 
 def start_plugins():
-    for name, plugin in six.iteritems(PLUGINS):
+    for name, plugin in iteritems(PLUGINS):
         if plugin.enabled and plugin.autostart:
             LOG.info("plugin at_start: %r", name)
             plugin.at_start()
 
 def start_inoplugs():
-    for name, inoplug in six.iteritems(INOPLUGS):
+    for name, inoplug in iteritems(INOPLUGS):
         if inoplug.enabled and inoplug.autostart:
             LOG.info("inoplug at_start: %r", name)
             inoplug.at_start()
