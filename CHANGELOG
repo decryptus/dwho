@@ -1,3 +1,9 @@
+python-dwho (0.3.32) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 18 Sep 2020 23:22:38 +0200
+
 python-dwho (0.3.31) unstable; urgency=medium
 
   * Reviewed six importation.
