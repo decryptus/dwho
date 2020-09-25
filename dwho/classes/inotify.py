@@ -514,6 +514,7 @@ class DWhoInotify(threading.Thread):
         self.scan_event.set()
         if self.workerpool:
             self.workerpool.killall(0)
+        self.cfg_paths = {}
 
 
 class DWhoInotifyPlugs(threading.Thread):

@@ -1,3 +1,9 @@
+python-dwho (0.3.33) unstable; urgency=medium
+
+  * Fixed memory leaks in DWhoInotify.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 25 Sep 2020 12:31:37 +0200
+
 python-dwho (0.3.32) unstable; urgency=medium
 
   * Reviewed requirements.
