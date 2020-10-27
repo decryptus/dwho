@@ -1,3 +1,9 @@
+python-dwho (0.3.34) unstable; urgency=medium
+
+  * Fixed method disconnect in redis adapter.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Tue, 27 Oct 2020 22:36:23 +0100
+
 python-dwho (0.3.33) unstable; urgency=medium
 
   * Fixed memory leaks in DWhoInotify.

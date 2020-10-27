@@ -266,7 +266,7 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
 
         if self.servers[name]['conn']:
             try:
-                self.servers[name]['conn'].disconnect()
+                self.servers[name]['conn'].connection_pool.disconnect()
             except Exception:
                 pass
 
