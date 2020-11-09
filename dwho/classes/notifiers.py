@@ -8,6 +8,7 @@ import copy
 import json
 import logging
 import os
+import re
 import subprocess
 import threading
 import time
@@ -27,6 +28,7 @@ from sonicprobe.libs.workerpool import WorkerPool
 import requests
 
 from six import iteritems, string_types
+from six.moves.urllib import request as urlrequest
 
 from dwho.adapters.redis import DWhoAdapterRedis
 from dwho.config import get_softname, get_softver
@@ -37,6 +39,7 @@ LOG = logging.getLogger('dwho.notifiers')
 
 HTTP_ALLOWED_METHODS = ('delete', 'head', 'get', 'patch', 'post', 'put')
 DEFAULT_TIMEOUT      = 30
+PARSE_TAGS           = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,29}[a-zA-Z0-9]$').match
 
 
 class DWhoNotifiers(dict):
@@ -44,7 +47,7 @@ class DWhoNotifiers(dict):
         if not isinstance(notifier, DWhoNotifierBase):
             raise TypeError("Invalid Notifier class. (class: %r)" % notifier)
 
-        if isinstance(notifier.SCHEME, string_types):
+        if helpers.has_len(notifier.SCHEME):
             schemes = [notifier.SCHEME]
         else:
             schemes = notifier.SCHEME
@@ -64,12 +67,43 @@ NOTIFIERS = DWhoNotifiers()
 class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritance
     def __init__(self, server_id = None, config_path = None):
         self.notifications  = {}
+        self.notif_names    = set()
         self.server_id      = server_id or getfqdn()
         self.workerpool     = None
         self._lock          = threading.Lock()
 
         if config_path:
             self.load(config_path)
+
+    @staticmethod
+    def _parse_tags(tags, name = None):
+        r = set()
+
+        if not isinstance(tags, (list, set, tuple)):
+            if tags is not None:
+                if name:
+                    LOG.warning("invalid tags configuration in %s", name)
+                else:
+                    LOG.warning("invalid tags")
+            r.add('always')
+            return r
+
+        for tag in tags:
+            if not helpers.has_len(tag):
+                LOG.warning("invalid tag type: %r", tag)
+                continue
+
+            m = PARSE_TAGS(tag.strip())
+            if not m:
+                LOG.warning("invalid tag: %r", tag)
+                continue
+
+            r.add(m.group(0))
+
+        if not r:
+            r.add('always')
+
+        return r
 
     def load(self, config_path):
         if not config_path:
@@ -90,31 +124,45 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                 name = os.path.splitext(os.path.basename(xpath))[0]
                 cfg  = helpers.load_yaml(f)
 
+                self.notif_names.add(name)
                 self.notifications[name] = {'cfg': cfg,
                                             'tpl': None,
+                                            'tags': None,
                                             'notifiers': []}
+
+                ref = self.notifications[name]
+                ref['tags'] = self._parse_tags(cfg['general'].get('tags'), name)
 
                 if cfg['general'].get('template') and os.path.isfile(cfg['general']['template']):
                     with open(cfg['general']['template'], 'r') as t:
-                        self.notifications[name]['tpl'] = t.read()
+                        ref['tpl'] = t.read()
 
                 uri_scheme = urisup.uri_help_split(cfg['general']['uri'])[0].lower()
 
-                if uri_scheme in NOTIFIERS:
-                    self.notifications[name]['notifiers'] = NOTIFIERS[uri_scheme]
-                else:
+                if uri_scheme not in NOTIFIERS:
                     raise NotImplementedError("unsupported notifiers: %r" % uri_scheme)
+
+                ref['notifiers'] = NOTIFIERS[uri_scheme]
 
             if f:
                 f.close()
 
     def reset(self):
         self.notifications = {}
+        self.notif_names = set()
         return self
 
-    def _run(self, xvars = None):
+    def _run(self, xvars = None, names = None, tags = None):
         if not xvars:
             xvars = {}
+
+        if helpers.has_len(names):
+            names = set([names])
+
+        if not names or not isinstance(names, (list, tuple, set)):
+            names = self.notif_names
+
+        tags                 = self._parse_tags(tags)
 
         nvars                = copy.deepcopy(xvars)
         nvars['_ENV_']       = copy.deepcopy(os.environ)
@@ -123,6 +171,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         nvars['_SERVER_ID_'] = self.server_id
         nvars['_SOFTNAME_']  = get_softname()
         nvars['_SOFTVER_']   = get_softver()
+        nvars['_TAGS_']      = tags
         nvars['_TIME_']      = datetime.now()
         nvars['_TIMESTAMP_'] = time.time()
         nvars['_UUID_']      = "%s" % uuid.uuid4()
@@ -132,33 +181,51 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             self.workerpool = WorkerPool(max_workers = 1,
                                          name = 'notifiers')
 
-        for name, notification in iteritems(self.notifications):
+        for name in names:
+            if name not in self.notifications:
+                LOG.warning("unable to find notification: %r", name)
+                continue
+
+            notification = self.notifications[name]
+
             if not notification['cfg']['general'].get('enabled', True):
                 continue
 
+            if tags and notification['tags']:
+                if 'never' in tags:
+                    continue
+
+                common_tags = tags.intersection(notification['tags'])
+                if not common_tags:
+                    continue
+
+                LOG.debug("common tags found: %r", list(common_tags))
+
+            nvars['_NAME_'] = name
+
+            tpl = None
             if notification['tpl']:
                 tpl = json.loads(Template(notification['tpl'],
                                           imports = ['import json',
                                                      'from escapejson import escapejson',
                                                      'from os import environ as ENV']).render(**nvars))
-            else:
-                tpl = None
 
-            cfg                   = notification['cfg'].copy()
+            cfg = notification['cfg'].copy()
             cfg['general']['uri'] = Template(cfg['general']['uri']).render(**nvars)
-            uri                   = urisup.uri_help_split(cfg['general']['uri'])
+            uri = urisup.uri_help_split(cfg['general']['uri'])
 
             for notifier in notification['notifiers']:
-                if cfg['general'].get('async'):
-                    self.workerpool.run_args(notifier,
-                                             _name_ = "notifier:%s" % name,
-                                             name   = name,
-                                             cfg    = cfg,
-                                             uri    = uri,
-                                             nvars  = nvars,
-                                             tpl    = tpl)
-                else:
+                if not cfg['general'].get('async'):
                     notifier(name, cfg, uri, nvars, tpl)
+                    continue
+
+                self.workerpool.run_args(notifier,
+                                         _name_ = "notifier:%s" % name,
+                                         name   = name,
+                                         cfg    = cfg,
+                                         uri    = uri,
+                                         nvars  = nvars,
+                                         tpl    = tpl)
 
         while self.workerpool:
             if self.workerpool.killable():
@@ -166,10 +233,10 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                 self.workerpool = None
             time.sleep(0.5)
 
-    def __call__(self, xvars = None):
+    def __call__(self, xvars = None, names = None, tags = None):
         with self._lock:
             try:
-                self._run(xvars)
+                self._run(xvars, names, tags)
             except Exception as e:
                 LOG.exception(e)
 
@@ -208,6 +275,17 @@ class DWhoNotifierHttp(DWhoNotifierBase):
 
         if 'payload' in tpl:
             payload = tpl['payload']
+
+        if not isinstance(headers, dict):
+            headers = {}
+
+        if headers:
+            req = urlrequest.Request("http://127.0.0.1", data="", headers=headers)
+            headers = req.headers
+
+            if isinstance(payload, dict) \
+               and headers.get('Content-type') == 'application/json':
+                payload = json.dumps(payload)
 
         try:
             r = getattr(requests, method)(cfg['general']['uri'],
@@ -258,6 +336,8 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
         env.update({'DWHO_NOTIFIER':           'true',
                     'DWHO_NOTIFIER_HOSTNAME':  "%s" % getfqdn(),
                     'DWHO_NOTIFIER_GMTIME':    "%s" % xvars['_GMTIME_'],
+                    'DWHO_NOTIFIER_NAME':      "%s" % xvars['_NAME_'],
+                    'DWHO_NOTIFIER_TAGS':      "%s" % ','.join(xvars['_TAGS_']),
                     'DWHO_NOTIFIER_TIME':      "%s" % xvars['_TIME_'],
                     'DWHO_NOTIFIER_TIMESTAMP': "%s" % xvars['_TIMESTAMP_'],
                     'DWHO_NOTIFIER_SERVER_ID': "%s" % xvars['_SERVER_ID_'],

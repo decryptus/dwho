@@ -1,3 +1,51 @@
+python-dwho (0.3.42) unstable; urgency=medium
+
+  * Changed loglevel for a message in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 09 Nov 2020 15:17:59 +0100
+
+python-dwho (0.3.41) unstable; urgency=medium
+
+  * Fixed HTTP notifier with json payload in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 09 Nov 2020 12:33:26 +0100
+
+python-dwho (0.3.40) unstable; urgency=medium
+
+  * Fixed HTTP notifier with json payload in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Mon, 09 Nov 2020 11:58:19 +0100
+
+python-dwho (0.3.39) unstable; urgency=medium
+
+  * Reviewed class classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sun, 08 Nov 2020 19:34:35 +0100
+
+python-dwho (0.3.38) unstable; urgency=medium
+
+  * Added variable DWHO_NOTIFIER_NAME in notifier.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sun, 08 Nov 2020 18:58:37 +0100
+
+python-dwho (0.3.37) unstable; urgency=medium
+
+  * Reviewed templates variables in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 07 Nov 2020 23:09:19 +0100
+
+python-dwho (0.3.36) unstable; urgency=medium
+
+  * Added environment variable DWHO_NOTIFIER_TAGS in subprocess notifier.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 07 Nov 2020 16:18:57 +0100
+
+python-dwho (0.3.35) unstable; urgency=medium
+
+  * Added tags in notifiers.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 07 Nov 2020 16:15:01 +0100
+
 python-dwho (0.3.34) unstable; urgency=medium
 
   * Fixed method disconnect in redis adapter.
