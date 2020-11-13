@@ -1,3 +1,33 @@
+python-dwho (0.3.47) unstable; urgency=medium
+
+  * Reviewed log messages in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Fri, 13 Nov 2020 13:47:20 +0100
+
+python-dwho (0.3.46) unstable; urgency=medium
+
+  * Fixed tag never in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Nov 2020 19:59:49 +0100
+
+python-dwho (0.3.45) unstable; urgency=medium
+
+  * Reviewed tags configuration in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Nov 2020 17:28:42 +0100
+
+python-dwho (0.3.44) unstable; urgency=medium
+
+  * Fixed tags when is null in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Nov 2020 11:35:27 +0100
+
+python-dwho (0.3.43) unstable; urgency=medium
+
+  * Reviewed tags when is null in classes.DWhoPushNotifications.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Thu, 12 Nov 2020 11:28:20 +0100
+
 python-dwho (0.3.42) unstable; urgency=medium
 
   * Changed loglevel for a message in classes.DWhoPushNotifications.

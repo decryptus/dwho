@@ -76,7 +76,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             self.load(config_path)
 
     @staticmethod
-    def _parse_tags(tags, name = None):
+    def _parse_tags(tags, name = None, default = 'all'):
         r = set()
 
         if not isinstance(tags, (list, set, tuple)):
@@ -85,7 +85,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                     LOG.warning("invalid tags configuration in %s", name)
                 else:
                     LOG.warning("invalid tags")
-            r.add('always')
+            r.add(default)
             return r
 
         for tag in tags:
@@ -101,7 +101,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             r.add(m.group(0))
 
         if not r:
-            r.add('always')
+            r.add(default)
 
         return r
 
@@ -140,7 +140,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                 uri_scheme = urisup.uri_help_split(cfg['general']['uri'])[0].lower()
 
                 if uri_scheme not in NOTIFIERS:
-                    raise NotImplementedError("unsupported notifiers: %r" % uri_scheme)
+                    raise NotImplementedError("unsupported URI scheme: %r" % uri_scheme)
 
                 ref['notifiers'] = NOTIFIERS[uri_scheme]
 
@@ -162,7 +162,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         if not names or not isinstance(names, (list, tuple, set)):
             names = self.notif_names
 
-        tags                 = self._parse_tags(tags)
+        tags = self._parse_tags(tags)
 
         nvars                = copy.deepcopy(xvars)
         nvars['_ENV_']       = copy.deepcopy(os.environ)
@@ -183,7 +183,7 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
 
         for name in names:
             if name not in self.notifications:
-                LOG.warning("unable to find notification: %r", name)
+                LOG.warning("unable to find notifier: %r", name)
                 continue
 
             notification = self.notifications[name]
@@ -191,15 +191,17 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             if not notification['cfg']['general'].get('enabled', True):
                 continue
 
-            if tags and notification['tags']:
-                if 'never' in tags:
-                    continue
-
+            if 'always' in notification['tags']:
+                LOG.info("'always' tag found. (notifier: %r)", name)
+            elif 'all' in tags and 'never' in notification['tags']:
+                LOG.info("'never' tag found. (notifier: %r)", name)
+            else:
                 common_tags = tags.intersection(notification['tags'])
-                if not common_tags:
+                if common_tags:
+                    LOG.info("common tags found %r. (notifier: %r)", list(common_tags), name)
+                else:
+                    LOG.debug("no common tag found. (notifier: %r)", name)
                     continue
-
-                LOG.debug("common tags found: %r", list(common_tags))
 
             nvars['_NAME_'] = name
 
@@ -265,7 +267,7 @@ class DWhoNotifierHttp(DWhoNotifierBase):
             if tpl['method'].lower() in HTTP_ALLOWED_METHODS:
                 method = tpl['method'].lower()
             else:
-                raise ValueError("invalid HTTP method: %r" % tpl['method'])
+                raise ValueError("invalid HTTP method: %r. (notifier: %r)" % (tpl['method'], name))
 
         if isinstance(tpl.get('auth'), dict):
             auth = tpl['auth']
@@ -296,12 +298,12 @@ class DWhoNotifierHttp(DWhoNotifierBase):
                                           verify  = verify)
 
             if 200 <= r.status_code < 300:
-                LOG.info("notification pushed: %r", name)
+                LOG.info("notification pushed. (notifier: %r, statuscode: %r)", name, r.status_code)
                 return True
 
-            LOG.error("unable to push notification: %r: %r", name, r.text)
+            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, r.text)
         except Exception as e:
-            LOG.error("unable to push notification %r: %r", name, e)
+            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
 
         return None
 
@@ -316,16 +318,21 @@ class DWhoNotifierRedis(DWhoNotifierBase):
         config['general']['redis']['notifier']['url'] = cfg['general']['uri']
 
         if not tpl or not isinstance(tpl, dict):
-            LOG.error("missing redis template for %r", name)
+            LOG.error("missing redis template. (notifier: %r)", name)
             return
+
+        adapter_redis = None
 
         try:
             adapter_redis = DWhoAdapterRedis(config, prefix = 'notifier')
             adapter_redis.set_key(tpl['key'], json.dumps(tpl['value']))
         except Exception as e:
-            LOG.error("unable to push notification %r: %r", name, e)
+            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
         else:
-            LOG.info("notification pushed: %r", name)
+            LOG.info("notification pushed. (notifier: %r)", name)
+        finally:
+            if adapter_redis:
+                adapter_redis.disconnect()
 
 
 class DWhoNotifierSubprocess(DWhoNotifierBase):
@@ -353,12 +360,12 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if cargs:
             if not isinstance(cargs, list):
-                LOG.error("invalid configuration args for notifier: %r", name)
+                LOG.error("invalid configuration args. (notifier: %r)", name)
                 return None
 
             for x in cargs:
                 if not isinstance(x, string_types):
-                    LOG.error("invalid configuration argument %r for notifier: %r", x, name)
+                    LOG.error("invalid configuration argument %r. (notifier: %r)", x, name)
                     return None
 
                 if '{' in x and '}' in x:
@@ -367,12 +374,12 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if targs:
             if not isinstance(targs, list):
-                LOG.error("invalid template args for notifier: %r", name)
+                LOG.error("invalid template args. (notifier: %r)", name)
                 return None
 
             for x in targs:
                 if not isinstance(x, string_types):
-                    LOG.error("invalid template argument %r for notifier: %r", x, name)
+                    LOG.error("invalid template argument %r. (notifier: %r)", x, name)
                     return None
 
                 if '{' in x and '}' in x:
@@ -386,7 +393,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
         r = {}
 
         if not isinstance(envfiles, list):
-            LOG.error("invalid payload envfiles for notifier: %r", name)
+            LOG.error("invalid payload envfiles. (notifier: %r)", name)
             return r
 
         for envfile in envfiles:
@@ -403,7 +410,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if tenvfiles:
             if not isinstance(tenvfiles, list):
-                LOG.warning("invalid template envfiles for notifier: %r", name)
+                LOG.warning("invalid template envfiles. (notifier: %r)", name)
                 return r
 
             for key, val in iteritems(self._load_envfile(name, tenvfiles)):
@@ -411,7 +418,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if cenvfiles:
             if not isinstance(cenvfiles, list):
-                LOG.warning("invalid configuration envfiles for notifier: %r", name)
+                LOG.warning("invalid configuration envfiles. (notifier: %r)", name)
                 return r
 
             for key, val in iteritems(self._load_envfile(name, cenvfiles)):
@@ -422,14 +429,14 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                 for key, val in iteritems(cenv):
                     env.append({key: val})
             elif not isinstance(cenv, list):
-                LOG.warning("invalid configuration env for notifier: %r", name)
+                LOG.warning("invalid configuration env. (notifier: %r)", name)
                 return r
             else:
                 env.extend(cenv)
 
         if tenv:
             if not isinstance(tenv, dict):
-                LOG.warning("invalid template env for notifier: %r", name)
+                LOG.warning("invalid template env. (notifier: %r)", name)
                 return r
 
             r = tenv.copy()
@@ -475,23 +482,23 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if tpl.get('args'):
             if cfg.get('disallow-args'):
-                LOG.warning("args from template isn't allowed for notifier: %r", name)
+                LOG.warning("args from template isn't allowed. (notifier: %r)", name)
             else:
                 targs = copy.copy(tpl['args'])
 
         args = self._mk_args(name, args, cfg.get('args'), targs, xvars)
         if not args:
-            raise ValueError("invalid args for notifier: %r" % name)
+            raise ValueError("invalid args. (notifier: %r)" % name)
 
         if tpl.get('env'):
             if cfg.get('disallow-env'):
-                LOG.warning("env from template isn't allowed for notifier: %r", name)
+                LOG.warning("env from template isn't allowed. (notifier: %r)", name)
             else:
                 tenv = tpl['env']
 
         if tpl.get('envfile'):
             if cfg.get('disallow-env'):
-                LOG.warning("envfile from template isn't allowed for notifier: %r", name)
+                LOG.warning("envfile from template isn't allowed. (notifier: %r)", name)
             else:
                 tenvfiles = tpl['envfile']
 
@@ -501,7 +508,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         if cfg.get('search_paths'):
             if not isinstance(cfg['search_paths'], list):
-                LOG.warning("invalid search_paths for notifier: %r", name)
+                LOG.warning("invalid search_paths. (notifier: %r)", name)
             else:
                 env['PATH'] = os.path.pathsep.join(cfg['search_paths'])
 
@@ -534,14 +541,15 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                     break
 
                 if start + timeout <= time.time():
-                    raise StopIteration("timeout on notifier: %r" % name)
+                    raise StopIteration("timeout. (notifier: %r)" % name)
 
             if proc.returncode:
                 raise subprocess.CalledProcessError(proc.returncode, args[0])
+            LOG.info("notification pushed. (notifier: %r, returncode: %r)", name, proc.returncode)
         except subprocess.CalledProcessError as e:
-            LOG.error("unable to push notification %r: %r, rc: %r", name, e, e.returncode)
+            LOG.error("unable to push notification. (notifier: %r, returncode: %r, error: %r)", name, e.returncode, e)
         except Exception as e:
-            LOG.error("unable to push notification %r: %r", name, e)
+            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
         finally:
             texit.set()
 

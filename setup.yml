@@ -4,8 +4,8 @@ description: dwho
 author: Adrien Delle Cave
 author_email: pypi@doowan.net
 copyright: '2020 Adrien Delle Cave'
-release: '0.3.42'
-version: '0.3.42'
+release: '0.3.47'
+version: '0.3.47'
 license: License GPL-3
 url: https://github.com/decryptus/dwho
 python_requires:
