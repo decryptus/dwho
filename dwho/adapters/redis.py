@@ -258,18 +258,34 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
 
         return r
 
-    def disconnect(self, name):
-        if not self.servers:
-            self.servers = {name:
-                            {'conn':     None,
-                             'options':  {}}}
+    def disconnect(self, name = None, prefix = None, servers = None):
+        if not servers:
+            servers = self.servers
 
-        if self.servers[name]['conn']:
+        if name:
+            if not servers.get(name) or not servers[name]['conn']:
+                return self
+
             try:
-                self.servers[name]['conn'].connection_pool.disconnect()
+                servers[name]['conn'].connection_pool.disconnect()
             except Exception:
                 pass
 
-        self.servers[name]['conn']   = None
+            servers[name]['conn'] = None
+
+            return self
+
+        for cname in iterkeys(self.config['general']['redis']):
+            if prefix and not cname.startswith(prefix):
+                continue
+            elif not servers.get(cname) or not servers[cname]['conn']:
+                continue
+
+            try:
+                servers[cname]['conn'].connection_pool.disconnect()
+            except Exception:
+                pass
+
+            servers[cname]['conn']   = None
 
         return self

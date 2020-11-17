@@ -192,13 +192,13 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                 continue
 
             if 'always' in notification['tags']:
-                LOG.info("'always' tag found. (notifier: %r)", name)
+                LOG.debug("'always' tag found. (notifier: %r)", name)
             elif 'all' in tags and 'never' in notification['tags']:
-                LOG.info("'never' tag found. (notifier: %r)", name)
+                LOG.debug("'never' tag found. (notifier: %r)", name)
             else:
                 common_tags = tags.intersection(notification['tags'])
                 if common_tags:
-                    LOG.info("common tags found %r. (notifier: %r)", list(common_tags), name)
+                    LOG.debug("common tags found %r. (notifier: %r)", list(common_tags), name)
                 else:
                     LOG.debug("no common tag found. (notifier: %r)", name)
                     continue
@@ -332,7 +332,7 @@ class DWhoNotifierRedis(DWhoNotifierBase):
             LOG.info("notification pushed. (notifier: %r)", name)
         finally:
             if adapter_redis:
-                adapter_redis.disconnect()
+                adapter_redis.disconnect(prefix = 'notifier')
 
 
 class DWhoNotifierSubprocess(DWhoNotifierBase):
