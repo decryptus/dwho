@@ -1,5 +1,5 @@
 escapejson
-httpdis>=0.6.14
+httpdis>=0.6.16
 Mako
 PyYAML>=3.10
 pyinotify
@@ -7,4 +7,4 @@ python-dotenv
 redis>=2.4.0
 requests>=2.0
 six>=1.13.0
-sonicprobe>=0.3.32
+sonicprobe>=0.3.34

@@ -177,6 +177,22 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     else:
         conf = parse_conf(conf, load_creds)
 
+    for x in ('modules', 'plugins'):
+        if not conf.get("import_%s" % x):
+            continue
+
+        import_files = conf["import_%s" % x]
+
+        if isinstance(import_files, string_types):
+            import_files = [import_files]
+
+        for import_file in import_files:
+            conf[x] = helpers.merge(
+                helpers.load_conf_yaml_file(
+                    import_file,
+                    conf['_config_directory']),
+                conf.get(x) or {})
+
     for name, module in iteritems(MODULES):
         LOG.info("module init: %r", name)
         module.init(conf)

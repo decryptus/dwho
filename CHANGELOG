@@ -1,3 +1,21 @@
+python-dwho (0.3.52) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sun, 06 Dec 2020 21:36:39 +0100
+
+python-dwho (0.3.51) unstable; urgency=medium
+
+  * Reviewed import modules and plugins from external files.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 05 Dec 2020 22:01:25 +0100
+
+python-dwho (0.3.50) unstable; urgency=medium
+
+  * Added possibility to import modules and plugins from external files.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Sat, 05 Dec 2020 21:30:26 +0100
+
 python-dwho (0.3.49) unstable; urgency=medium
 
   * Reviewed notifier redis disconnect.
