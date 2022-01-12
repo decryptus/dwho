@@ -145,58 +145,30 @@ def parse_conf(conf, load_creds = False):
 
     return conf
 
-def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False, envvar = None, custom_file = None):
-    signal.signal(signal.SIGTERM, stop)
-    signal.signal(signal.SIGINT, stop)
+def import_conf_files(name, conf):
+    if not conf.get("import_%s" % name):
+        return conf
 
-    conf = {'_config_directory': None}
+    import_files = conf["import_%s" % name]
 
-    if os.path.exists(xfile):
-        with open(xfile, 'r') as f:
-            conf = helpers.load_yaml(f)
+    if isinstance(import_files, string_types):
+        import_files = [import_files]
 
-        config_directory = os.path.dirname(os.path.abspath(xfile))
-        conf['_config_directory'] = config_directory
+    for import_file in import_files:
+        conf[name] = helpers.merge(
+            helpers.load_conf_yaml_file(
+                import_file,
+                conf['_config_directory']),
+            conf.get(name) or {})
 
-        if custom_file:
-            conf = helpers.merge(
-                helpers.load_conf_yaml_file(
-                    custom_file,
-                    config_directory),
-                conf)
+    return conf
 
-        conf['_config_directory'] = config_directory
-    elif envvar and os.environ.get(envvar):
-        c = StringIO(os.environ[envvar])
-        conf = helpers.load_yaml(c.getvalue())
-        c.close()
-        conf['_config_directory'] = None
-
-    if parse_conf_func:
-        conf = parse_conf_func(conf)
-    else:
-        conf = parse_conf(conf, load_creds)
-
-    for x in ('modules', 'plugins'):
-        if not conf.get("import_%s" % x):
-            continue
-
-        import_files = conf["import_%s" % x]
-
-        if isinstance(import_files, string_types):
-            import_files = [import_files]
-
-        for import_file in import_files:
-            conf[x] = helpers.merge(
-                helpers.load_conf_yaml_file(
-                    import_file,
-                    conf['_config_directory']),
-                conf.get(x) or {})
-
+def init_modules(conf):
     for name, module in iteritems(MODULES):
         LOG.info("module init: %r", name)
         module.init(conf)
 
+def init_plugins(conf):
     for name, plugin in iteritems(PLUGINS):
         LOG.info("plugin init: %r", name)
         plugin.init(conf)
@@ -208,27 +180,29 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
         plugin.safe_init()
         DWHO_THREADS.append(plugin.at_stop)
 
-    if _INOTIFY:
-        _INOTIFY.init(conf)
+def init_inotify(conf):
+    _INOTIFY.init(conf)
 
-        for name, inoplug in iteritems(INOPLUGS):
-            LOG.info("inoplug init: %r", name)
-            inoplug.init(conf)
-            LOG.info("inoplug safe_init: %r", name)
-            inoplug.safe_init()
-            DWHO_THREADS.append(inoplug.at_stop)
+    for name, inoplug in iteritems(INOPLUGS):
+        LOG.info("inoplug init: %r", name)
+        inoplug.init(conf)
+        LOG.info("inoplug safe_init: %r", name)
+        inoplug.safe_init()
+        DWHO_THREADS.append(inoplug.at_stop)
 
-    if not options or not isinstance(options, object):
-        return conf
+def init_logger(logfile, name = None): # pylint: disable=unused-argument
+    xformat     = "%(levelname)s:%(asctime)-15s %(name)s[%(process)d][%(threadName)s]: %(message)s"
+    datefmt     = '%Y-%m-%d %H:%M:%S'
+    logging.basicConfig(level   = logging.DEBUG,
+                        format  = xformat,
+                        datefmt = datefmt)
+    filehandler = WatchedFileHandler(logfile)
+    filehandler.setFormatter(logging.Formatter(xformat,
+                                               datefmt=datefmt))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(filehandler)
 
-    for def_option in iterkeys(get_default_options()):
-        if getattr(options, def_option, None) is None \
-           and def_option in conf['general']:
-            setattr(options, def_option, conf['general'][def_option])
-
-    setattr(options, 'configuration', conf)
-
-    return options
+    return root_logger
 
 def load_credentials(credentials, config_dir = None):
     if isinstance(credentials, string_types):
@@ -255,6 +229,58 @@ def start_inotify():
     start_inoplugs()
     _INOTIFY.start()
 
+def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False, envvar = None, custom_file = None):
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+
+    conf = {'_config_directory': None}
+
+    if os.path.exists(xfile):
+        with open(xfile, 'r') as f:
+            conf = helpers.load_yaml(f)
+
+        config_directory = os.path.dirname(os.path.abspath(xfile))
+        conf['_config_directory'] = config_directory
+
+        if custom_file:
+            conf = helpers.merge(
+                helpers.load_conf_yaml_file(
+                    custom_file,
+                    config_directory),
+                conf)
+            conf['_config_directory'] = config_directory
+    elif envvar and os.environ.get(envvar):
+        c = StringIO(os.environ[envvar])
+        conf = helpers.load_yaml(c.getvalue())
+        c.close()
+        conf['_config_directory'] = None
+
+    if parse_conf_func:
+        conf = parse_conf_func(conf)
+    else:
+        conf = parse_conf(conf, load_creds)
+
+    for x in ('modules', 'plugins'):
+        conf = import_conf_files(x, conf)
+
+    init_modules(conf)
+    init_plugins(conf)
+
+    if _INOTIFY:
+        init_inotify(conf)
+
+    if not options or not isinstance(options, object):
+        return conf
+
+    for def_option in iterkeys(get_default_options()):
+        if getattr(options, def_option, None) is None \
+           and def_option in conf['general']:
+            setattr(options, def_option, conf['general'][def_option])
+
+    setattr(options, 'configuration', conf)
+
+    return options
+
 def make_piddir(pidfile, uid, gid):
     piddir = os.path.dirname(pidfile)
     if piddir and not os.path.exists(piddir):
@@ -266,17 +292,3 @@ def make_logdir(logfile, uid, gid):
     if logdir and not os.path.exists(logdir):
         helpers.make_dirs(logdir)
         os.chown(logdir, uid, gid)
-
-def init_logger(logfile, name = None): # pylint: disable=unused-argument
-    xformat     = "%(levelname)s:%(asctime)-15s %(name)s[%(process)d][%(threadName)s]: %(message)s"
-    datefmt     = '%Y-%m-%d %H:%M:%S'
-    logging.basicConfig(level   = logging.DEBUG,
-                        format  = xformat,
-                        datefmt = datefmt)
-    filehandler = WatchedFileHandler(logfile)
-    filehandler.setFormatter(logging.Formatter(xformat,
-                                               datefmt=datefmt))
-    root_logger = logging.getLogger('')
-    root_logger.addHandler(filehandler)
-
-    return root_logger

@@ -1,3 +1,9 @@
+python-dwho (0.3.55) unstable; urgency=medium
+
+  * Added import_conf_files, init_modules and init_plugins functions in dwho/config.py.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Wed, 12 Jan 2022 00:55:33 +0100
+
 python-dwho (0.3.54) unstable; urgency=medium
 
   * Reviewed requirements.
