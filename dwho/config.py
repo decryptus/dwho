@@ -17,7 +17,7 @@ try:
 except ImportError:
     from six import StringIO
 
-from httpdis.httpdis import get_default_options
+from httpdis.config import get_default_options
 from sonicprobe import helpers
 from sonicprobe.libs import keystore, network
 from dwho.classes.errors import DWhoConfigurationError

@@ -1,3 +1,9 @@
+python-dwho (0.3.57) unstable; urgency=medium
+
+  * Reviewed import from httpdis.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Tue, 09 Aug 2022 00:16:36 +0200
+
 python-dwho (0.3.56) unstable; urgency=medium
 
   * Reviewed requirements.
