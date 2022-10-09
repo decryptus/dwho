@@ -1,3 +1,15 @@
+python-dwho (0.3.59) unstable; urgency=medium
+
+  * Fixed threading in dwho.classes.abstract.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Tue, 27 Sep 2022 16:03:30 +0200
+
+python-dwho (0.3.58) unstable; urgency=medium
+
+  * Reviewed requirements.
+
+ -- Adrien DELLE CAVE (Decryptus) <adc@doowan.net>  Tue, 09 Aug 2022 01:32:30 +0200
+
 python-dwho (0.3.57) unstable; urgency=medium
 
   * Reviewed import from httpdis.

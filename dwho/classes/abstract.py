@@ -11,7 +11,8 @@ try:
 except ImportError:
     from threading import get_ident as thread_get_ident
 
-from six import string_types
+from threading import _active_limbo_lock, _active
+from six import iterkeys, iteritems, string_types
 
 from sonicprobe.libs import anysql
 
@@ -20,7 +21,7 @@ _PARAMS_DICT_MODIFIERS_MATCH = re.compile(r'^(?:(?P<modifiers>[\+\-~=%]+)\s)?(?P
 _PARAM_REGEX_OPTS            = ('default', 'func', 'return', 'return_args')
 
 
-class DWhoAbstractHelper(object): # pylint: disable=useless-object-inheritance
+class DWhoAbstractHelper(object): # pylint: disable=useless-object-inheritance,too-few-public-methods
     __metaclass__ = abc.ABCMeta
 
     @classmethod
@@ -115,7 +116,7 @@ class DWhoAbstractHelper(object): # pylint: disable=useless-object-inheritance
             elif '-' in modifiers:
                 if key not in r:
                     continue
-                elif elt[ename] in (None, r[key]):
+                if elt[ename] in (None, r[key]):
                     del r[key]
             elif '~' in modifiers:
                 args = elt[ename]
@@ -151,6 +152,14 @@ class DWhoAbstractDB(object): # pylint: disable=useless-object-inheritance
 
     @db.setter
     def db(self, value):
+        with _active_limbo_lock:
+            for tid, db in iteritems(self._db):
+                if tid in _active:
+                    continue
+
+                for name in iterkeys(db):
+                    self.db_disconnect(name, db)
+
         thread_id = thread_get_ident()
         if thread_id not in self._db:
             self._db[thread_id] = {}
@@ -200,25 +209,30 @@ class DWhoAbstractDB(object): # pylint: disable=useless-object-inheritance
 
         return "%s" % res
 
-    def db_disconnect(self, name):
-        if not self.db:
-            self.db = {name: {'conn':   None,
-                              'cursor': None}}
+    def db_disconnect(self, name, db = None):
+        if not db:
+            if not self.db:
+                self.db = {name: {'conn':   None,
+                                  'cursor': None}}
+            db = self.db
 
-        if self.db[name]['cursor']:
+        if not db:
+            return self
+
+        if db[name]['cursor']:
             try:
-                self.db[name]['cursor'].close()
+                db[name]['cursor'].close()
             except Exception:
                 pass
 
-        self.db[name]['cursor'] = None
+        db[name]['cursor'] = None
 
-        if self.db[name]['conn']:
+        if db[name]['conn']:
             try:
-                self.db[name]['conn'].close()
+                db[name]['conn'].close()
             except Exception:
                 pass
 
-        self.db[name]['conn']   = None
+        db[name]['conn']   = None
 
         return self
