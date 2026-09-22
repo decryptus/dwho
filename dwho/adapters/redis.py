@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from six import iteritems, iterkeys
+from six import integer_types, iteritems, iterkeys
 from six.moves.urllib.parse import urlparse, parse_qs
 
 from redis import Redis
@@ -82,6 +82,34 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
                     r[name] = server['conn'].set(key, val)
 
         return r
+
+    def xadd(self, key, fields, maxlen = None, servers = None, prefix = None):
+        """Append fields to a Redis 5+ stream, returning IDs by server name.
+
+        Use the command API so older redis-py clients need no xadd() helper.
+        MAXLEN is exact; None leaves retention to the application.
+        """
+        if not isinstance(fields, dict) or not fields:
+            raise ValueError('stream fields must be a nonempty dictionary')
+        if maxlen is not None and (isinstance(maxlen, bool)
+                                   or not isinstance(maxlen, integer_types)
+                                   or not 0 < maxlen <= 9223372036854775807):
+            raise ValueError('stream maxlen must be a positive 64-bit integer')
+
+        args = ['XADD', key]
+        if maxlen is not None:
+            args.extend(['MAXLEN', maxlen])
+        args.append('*')
+        for field, value in iteritems(fields):
+            args.extend([field, value])
+
+        if servers is None:
+            servers = self.servers
+        result = {}
+        for name, server in iteritems(servers):
+            if not prefix or name.startswith(prefix):
+                result[name] = server['conn'].execute_command(*args)
+        return result
 
     def get_key(self, key, servers = None, prefix = None):
         if not servers:

@@ -152,10 +152,42 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         self.notif_names = set()
         return self
 
-    def _run(self, xvars = None, names = None, tags = None):
+    def _select(self, names, tags, strict):
+        selected = []
+        for name in names:
+            if name not in self.notifications:
+                if strict:
+                    raise ValueError('unknown notifier: %s' % name)
+                LOG.warning("unable to find notifier: %r", name)
+                continue
+            notification = self.notifications[name]
+            if not notification['cfg']['general'].get('enabled', True):
+                continue
+            # Preserve the existing tag selection behavior.
+            if ('always' not in notification['tags']
+                    and not ('all' in tags and 'never' in notification['tags'])
+                    and not tags.intersection(notification['tags'])):
+                continue
+            if strict:
+                if not notification['notifiers']:
+                    raise ValueError('no handler for notifier: %s' % name)
+                for notifier in notification['notifiers']:
+                    method = type(notifier).send
+                    base_method = DWhoNotifierBase.send
+                    if getattr(method, '__func__', method) is getattr(base_method, '__func__', base_method):
+                        raise NotImplementedError('notifier %s does not implement send()' % name)
+            selected.append(name)
+        if strict and not selected:
+            raise ValueError('no notifications selected')
+        return selected
+
+    def _run(self, xvars = None, names = None, tags = None, strict = False):
         if not xvars:
             xvars = {}
 
+        if strict and names is not None:
+            if not isinstance(names, string_types + (list, tuple, set)) or not names:
+                raise ValueError('names must be a nonempty name or collection')
         if helpers.has_len(names):
             names = set([names])
 
@@ -163,6 +195,8 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             names = self.notif_names
 
         tags = self._parse_tags(tags)
+        names = self._select(names, tags, strict)
+        results = {}
 
         nvars                = copy.deepcopy(xvars)
         nvars['_ENV_']       = copy.deepcopy(os.environ)
@@ -177,31 +211,12 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         nvars['_UUID_']      = "%s" % uuid.uuid4()
         nvars['_VARS_']      = copy.deepcopy(xvars)
 
-        if not self.workerpool:
+        if not strict and not self.workerpool:
             self.workerpool = WorkerPool(max_workers = 1,
                                          name = 'notifiers')
 
         for name in names:
-            if name not in self.notifications:
-                LOG.warning("unable to find notifier: %r", name)
-                continue
-
             notification = self.notifications[name]
-
-            if not notification['cfg']['general'].get('enabled', True):
-                continue
-
-            if 'always' in notification['tags']:
-                LOG.debug("'always' tag found. (notifier: %r)", name)
-            elif 'all' in tags and 'never' in notification['tags']:
-                LOG.debug("'never' tag found. (notifier: %r)", name)
-            else:
-                common_tags = tags.intersection(notification['tags'])
-                if common_tags:
-                    LOG.debug("common tags found %r. (notifier: %r)", list(common_tags), name)
-                else:
-                    LOG.debug("no common tag found. (notifier: %r)", name)
-                    continue
 
             nvars['_NAME_'] = name
 
@@ -221,6 +236,12 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                 call_cfg = copy.deepcopy(cfg)
                 call_vars = copy.deepcopy(nvars)
                 call_tpl = copy.deepcopy(tpl)
+                if strict:
+                    result = notifier.send(name, call_cfg, call_tpl, call_vars)
+                    if not result:
+                        raise RuntimeError('notifier %s did not acknowledge delivery' % name)
+                    results.setdefault(name, []).append(result)
+                    continue
                 if not cfg['general'].get('async'):
                     notifier(name, call_cfg, uri, call_vars, call_tpl)
                     continue
@@ -232,6 +253,9 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                                          uri    = uri,
                                          nvars  = call_vars,
                                          tpl    = call_tpl)
+
+        if strict:
+            return results
 
         while self.workerpool:
             if self.workerpool.killable():
@@ -246,6 +270,15 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
             except Exception as e:
                 LOG.exception(e)
 
+    def send(self, xvars = None, names = None, tags = None):
+        """Run selected handlers synchronously and return replies or raise.
+
+        Legacy-only handlers are rejected before sending anything. Multiple
+        deliveries are not atomic: earlier handlers may succeed before a failure.
+        """
+        with self._lock:
+            return self._run(xvars, names, tags, strict = True)
+
 
 class DWhoNotifierBase(DWhoAbstractHelper): # pylint: disable=useless-object-inheritance
     __metaclass__ = abc.ABCMeta
@@ -254,11 +287,21 @@ class DWhoNotifierBase(DWhoAbstractHelper): # pylint: disable=useless-object-inh
     def SCHEME(self):
         return
 
+    def send(self, name, cfg, tpl = None, nvars = None):
+        """Optional strict API. Legacy custom handlers only need __call__."""
+        raise NotImplementedError('this notifier does not implement send()')
+
 
 class DWhoNotifierHttp(DWhoNotifierBase):
     SCHEME = ('http', 'https')
 
     def __call__(self, name, cfg, uri, nvars, tpl = None):
+        return self._execute(name, cfg, tpl)
+
+    def send(self, name, cfg, tpl = None, nvars = None):
+        return self._execute(name, cfg, tpl, strict = True)
+
+    def _execute(self, name, cfg, tpl, strict = False):
         (method, auth, headers, payload) = ('post', None, {}, {})
 
         if not isinstance(tpl, dict):
@@ -305,8 +348,12 @@ class DWhoNotifierHttp(DWhoNotifierBase):
                 LOG.info("notification pushed. (notifier: %r, statuscode: %r)", name, r.status_code)
                 return True
 
+            if strict:
+                raise requests.HTTPError('notification returned HTTP %s' % r.status_code, response=r)
             LOG.error("unable to push notification. (notifier: %r, error: %r)", name, r.text)
         except Exception as e:
+            if strict:
+                raise
             LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
 
         return None
@@ -315,32 +362,62 @@ class DWhoNotifierHttp(DWhoNotifierBase):
 class DWhoNotifierRedis(DWhoNotifierBase):
     SCHEME = ('redis',)
 
-    def __call__(self, name, cfg, uri, nvars, tpl):
+    def send(self, name, cfg, tpl = None, nvars = None):
+        """Write synchronously; return Redis replies or propagate any failure.
+
+        Unlike the legacy callable/dispatcher, this API can be used by a
+        webhook that must acknowledge only a successfully written event.
+        """
+        if not isinstance(tpl, dict) or 'key' not in tpl or 'value' not in tpl:
+            raise ValueError('redis template requires key and value')
+
+        general = cfg['general']
+        mode = general.get('redis_mode', 'set')
+        if mode not in ('set', 'stream'):
+            raise ValueError('redis_mode must be set or stream')
+        payload = json.dumps(tpl['value'])
         config = {'general':
                   {'redis':
-                   {'notifier': copy.deepcopy(cfg['general'].get('options') or {})}}}
-        config['general']['redis']['notifier']['url'] = cfg['general']['uri']
-
-        if not tpl or not isinstance(tpl, dict):
-            LOG.error("missing redis template. (notifier: %r)", name)
-            return
+                   {'notifier': copy.deepcopy(general.get('options') or {})}}}
+        config['general']['redis']['notifier']['url'] = general['uri']
 
         adapter_redis = None
-
         try:
             adapter_redis = DWhoAdapterRedis(config, prefix = 'notifier')
-            adapter_redis.set_key(tpl['key'], json.dumps(tpl['value']))
-        except Exception as e:
-            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
-        else:
-            LOG.info("notification pushed. (notifier: %r)", name)
+            if mode == 'stream':
+                result = adapter_redis.xadd(tpl['key'], {'payload': payload},
+                                             maxlen = general.get('stream_maxlen'))
+            else:
+                result = adapter_redis.set_key(tpl['key'], payload)
+            if not result or not all(result.values()):
+                raise RuntimeError('Redis did not acknowledge the notification write')
+            return result
         finally:
             if adapter_redis:
                 adapter_redis.disconnect(prefix = 'notifier')
 
+    def __call__(self, name, cfg, uri, nvars, tpl):
+        # Keep the existing dispatcher contract: log failures, return None.
+        try:
+            self.send(name, cfg, tpl)
+        except Exception as e:
+            LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
+        else:
+            LOG.info("notification pushed. (notifier: %r)", name)
+
 
 class DWhoNotifierSubprocess(DWhoNotifierBase):
     SCHEME = ('subproc',)
+
+    def send(self, name, cfg, tpl = None, nvars = None):
+        variables = {'_GMTIME_': datetime.utcnow(), '_NAME_': name,
+                     '_TAGS_': set(['all']), '_TIME_': datetime.now(),
+                     '_TIMESTAMP_': time.time(), '_SERVER_ID_': getfqdn(),
+                     '_SOFTNAME_': get_softname(), '_SOFTVER_': get_softver(),
+                     '_UUID_': str(uuid.uuid4())}
+        variables.update(copy.deepcopy(nvars or {}))
+        uri = urisup.uri_help_split(cfg['general']['uri'])
+        return self._execute(name, cfg, uri, variables, tpl, strict = True)
 
     @staticmethod
     def _set_default_env(env, xvars):
@@ -473,7 +550,12 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
         return True
 
     def __call__(self, name, cfg, uri, nvars, tpl = None):
+        return self._execute(name, cfg, uri, nvars, tpl)
+
+    def _execute(self, name, cfg, uri, nvars, tpl, strict = False):
         if not uri[2]:
+            if strict:
+                raise ValueError('missing subprocess path')
             LOG.error("invalid subproc path: %r", uri[2])
             return None
 
@@ -555,9 +637,15 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
             if proc.returncode:
                 raise subprocess.CalledProcessError(proc.returncode, args[0])
             LOG.info("notification pushed. (notifier: %r, returncode: %r)", name, proc.returncode)
+            if strict:
+                return True
         except subprocess.CalledProcessError as e:
+            if strict:
+                raise
             LOG.error("unable to push notification. (notifier: %r, returncode: %r, error: %r)", name, e.returncode, e)
         except Exception as e:
+            if strict:
+                raise
             LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
         finally:
             texit.set()

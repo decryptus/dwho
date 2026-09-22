@@ -87,6 +87,96 @@ is configured at the YAML top level with `timeout` (seconds); shutdown attempts
 terminate, then kill after one second, and reaps the direct child. Commands should
 not daemonize or leave descendants holding their output pipes.
 
+### Explicit delivery results
+
+Existing `notify(...)` calls keep their legacy behavior, including asynchronous
+dispatch and logged delivery failures. Built-in `__call__` signatures and URI
+registration through `DWhoNotifiers` are unchanged.
+
+For callers that must know whether delivery succeeded, use the opt-in API:
+
+```python
+results = notify.send({'target': 'worker'}, names=['webhook'])
+# {'webhook': [True]} on HTTP success; failures raise an exception.
+```
+
+`send()` renders the same configuration/templates and runs selected handlers
+**synchronously**, even when `general.async` is true. It returns a dictionary
+mapping notification names to a list of handler results (one URI scheme can have
+multiple registered handlers). It stops at the first delivery error. Unknown names,
+an explicit empty name list, or an empty selection raise rather than report success.
+Omitting `names` selects all configured names using the existing tag/enabled filters.
+
+All built-in handlers expose the same direct API:
+`send(name, cfg, tpl=None, nvars=None)`. Direct calls receive already-rendered
+configuration and template dictionaries; use `DWhoPushNotifications.send()` when
+you need YAML loading, URI/template rendering and notification variables.
+
+| Handler | Successful result | Failure |
+| --- | --- | --- |
+| HTTP(S) | `True` for a final 2xx response | HTTP, timeout and connection exceptions propagate |
+| Redis `set` | Mapping of server names to SET acknowledgements | Configuration, serialization and Redis errors propagate |
+| Redis `stream` | Mapping of server names to generated entry IDs | Same, including unsupported commands and wrong key types |
+| Subprocess | `True` after exit code 0 | Nonzero exit, spawn error or timeout raises; child cleanup still runs |
+
+These acknowledge the destination response, not downstream processing. Multiple
+destinations are not a transaction: earlier sends may succeed before a later one
+fails. A retry can duplicate deliveries, including after a network timeout with
+an uncertain write outcome. Consumers should handle duplicates. For a webhook
+bridge, use one explicit destination and return HTTP success only after `send()`
+returns successfully; map delivery failures to an appropriate retryable response.
+
+Custom notifiers implementing only `__call__` continue to work with the legacy
+dispatcher. To opt in, implement `send(name, cfg, tpl=None, nvars=None)` and return
+a truthy acknowledgement or raise. The base implementation raises
+`NotImplementedError`; strict dispatch rejects legacy-only handlers before any
+delivery. It never infers success by calling a legacy handler that returns `None`.
+
+### Redis Streams
+
+Redis notifications still default to **SET**, with the original `key`/`value`
+template and JSON encoding. Repeated writes to that key replace the value.
+To append events instead, set `general.redis_mode: stream`:
+
+```yaml
+# /etc/my-service/notifications/events.yml
+general:
+  uri: 'redis://127.0.0.1:6379/0?socket_timeout=5&socket_connect_timeout=5'
+  tags: [all]
+  redis_mode: stream
+  stream_maxlen: 10000
+  template: /etc/my-service/templates/event.json
+```
+
+```json
+{"key": "monitoring:alerts", "value": ${json.dumps(_VARS_)}}
+```
+
+The second snippet is a trusted Mako template, rendered into JSON by the dispatcher.
+Each `XADD` creates an ID and stores the complete serialized `value` in a stream
+field named `payload`. `stream_maxlen` is an optional positive integer: when set,
+exact `MAXLEN` trimming bounds the stream length. If omitted, no trimming is
+performed. Trimming can remove events before a slow consumer processes them.
+
+```python
+from dwho.classes.notifiers import DWhoPushNotifications
+notify = DWhoPushNotifications(config_path='/etc/my-service/notifications')
+ids = notify.send({'status': 'firing', 'container': 'web'}, names=['events'])
+# {'events': [{'notifier': b'...-0'}]} with the default redis-py decoding settings.
+```
+
+Streams require **Redis server 5.0+**. The adapter uses `execute_command('XADD', ...)`
+so the new mode does not require upgrading old redis-py clients merely to obtain
+an `xadd()` helper. The existing dependency and Python compatibility ranges remain
+unchanged. Use a new key when migrating from SET: an existing string key is not
+converted, deleted or overwritten if XADD reports `WRONGTYPE`.
+
+Server persistence, retention and consumer acknowledgements are separate choices;
+successful XADD does not guarantee survival of a Redis crash or consumer processing.
+No automatic retry, consumer group, Pub/Sub publication or webhook server is added
+by this library change. Keep connection timeouts finite for request/response callers.
+See the [Redis XADD reference](https://redis.io/docs/latest/commands/xadd/).
+
 Inotify dispatch chooses the most specific matching directory, using path
 components rather than string prefixes. Filtering plugins for one event no longer
 changes the configured list for later events.
@@ -140,6 +230,10 @@ python -m twine check --strict dist/*
 ```
 
 Tests use temporary files, SQLite, mocked Redis and actual local subprocesses.
+CI also exercises SET and Streams against disposable Redis 5 and Redis 7 services.
+To run those integration tests locally, point `DWHO_REDIS_TEST_URL` at a disposable
+server and run `python -m unittest discover -s tests -p test_redis_integration.py -v`.
+Only UUID-prefixed test keys are created/deleted; the database is never flushed.
 No production service is contacted. See `.github/workflows/tests.yml` for the
 compatibility matrix and `.github/workflows/pypi.yml` for release gates.
 

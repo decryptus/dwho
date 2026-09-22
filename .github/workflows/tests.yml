@@ -4,6 +4,39 @@ on:
 permissions:
   contents: read
 jobs:
+  redis:
+    name: Redis integration (${{ matrix.redis }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        redis: ['5.0.14-alpine', '7.2.6-alpine']
+    services:
+      redis:
+        image: redis:${{ matrix.redis }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Verify SET compatibility, stream IDs, retention and wrong-type errors
+        env:
+          DWHO_REDIS_TEST_URL: redis://127.0.0.1:6379/0
+        run: |
+          cd "$(mktemp -d)"
+          python -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_redis_integration.py -v
+
   modern:
     runs-on: ubuntu-latest
     timeout-minutes: 20
