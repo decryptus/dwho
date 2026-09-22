@@ -212,22 +212,26 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
                                                      'from escapejson import escapejson',
                                                      'from os import environ as ENV']).render(**nvars))
 
-            cfg = notification['cfg'].copy()
+            cfg = copy.deepcopy(notification['cfg'])
             cfg['general']['uri'] = Template(cfg['general']['uri']).render(**nvars)
             uri = urisup.uri_help_split(cfg['general']['uri'])
 
             for notifier in notification['notifiers']:
+                # Each queued call owns its variables and configuration.
+                call_cfg = copy.deepcopy(cfg)
+                call_vars = copy.deepcopy(nvars)
+                call_tpl = copy.deepcopy(tpl)
                 if not cfg['general'].get('async'):
-                    notifier(name, cfg, uri, nvars, tpl)
+                    notifier(name, call_cfg, uri, call_vars, call_tpl)
                     continue
 
                 self.workerpool.run_args(notifier,
                                          _name_ = "notifier:%s" % name,
                                          name   = name,
-                                         cfg    = cfg,
+                                         cfg    = call_cfg,
                                          uri    = uri,
-                                         nvars  = nvars,
-                                         tpl    = tpl)
+                                         nvars  = call_vars,
+                                         tpl    = call_tpl)
 
         while self.workerpool:
             if self.workerpool.killable():
@@ -314,7 +318,7 @@ class DWhoNotifierRedis(DWhoNotifierBase):
     def __call__(self, name, cfg, uri, nvars, tpl):
         config = {'general':
                   {'redis':
-                   {'notifier': cfg['general'].get('options') or {}}}}
+                   {'notifier': copy.deepcopy(cfg['general'].get('options') or {})}}}
         config['general']['redis']['notifier']['url'] = cfg['general']['uri']
 
         if not tpl or not isinstance(tpl, dict):
@@ -447,18 +451,26 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
     @staticmethod
     def _proc_std(std, log, texit):
-        stopped = False
-        while not stopped:
-            try:
-                for x in iter(std.readline, b''):
-                    if x != '':
-                        log(x.rstrip())
-            except Exception as e:
-                LOG.exception(e)
-                break
-            finally:
-                if texit.is_set():
-                    stopped = True
+        try:
+            for line in iter(std.readline, b''):
+                log(line.rstrip())
+        except (IOError, ValueError):
+            if not texit.is_set():
+                LOG.exception('Unable to read subprocess output')
+        finally:
+            std.close()
+
+    @staticmethod
+    def _wait_process(proc, timeout):
+        clock = getattr(time, 'monotonic', time.time)
+        deadline = clock() + timeout
+        while proc.poll() is None:
+            remaining = deadline - clock()
+            if remaining <= 0:
+                return False
+            time.sleep(min(0.05, remaining))
+        proc.wait()
+        return True
 
     def __call__(self, name, cfg, uri, nvars, tpl = None):
         if not uri[2]:
@@ -516,6 +528,7 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
 
         texit = threading.Event()
         proc  = None
+        readers = []
 
         try:
             proc  = subprocess.Popen(args,
@@ -528,20 +541,16 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
                                      args=(proc.stdout, LOG.info, texit))
             to.daemon = True
             to.start()
+            readers.append(to)
 
             te    = threading.Thread(target=self._proc_std,
                                      args=(proc.stderr, LOG.error, texit))
             te.daemon = True
             te.start()
+            readers.append(te)
 
-            start = time.time()
-
-            while True:
-                if proc.poll() is not None:
-                    break
-
-                if start + timeout <= time.time():
-                    raise StopIteration("timeout. (notifier: %r)" % name)
+            if not self._wait_process(proc, timeout):
+                raise RuntimeError("timeout. (notifier: %r)" % name)
 
             if proc.returncode:
                 raise subprocess.CalledProcessError(proc.returncode, args[0])
@@ -552,12 +561,20 @@ class DWhoNotifierSubprocess(DWhoNotifierBase):
             LOG.error("unable to push notification. (notifier: %r, error: %r)", name, e)
         finally:
             texit.set()
-
-        try:
-            if proc and proc.returncode is None:
-                proc.terminate()
-        except OSError:
-            pass
+            if proc is not None:
+                if proc.poll() is None:
+                    try:
+                        proc.terminate()
+                    except OSError:
+                        pass
+                    if not self._wait_process(proc, 1.0):
+                        try:
+                            proc.kill()
+                        except OSError:
+                            pass
+                proc.wait()
+            for reader in readers:
+                reader.join(1.0)
 
 
 if __name__ != "__main__":

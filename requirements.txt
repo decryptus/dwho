@@ -3,6 +3,8 @@ httpdis>=0.6.25
 Mako
 PyYAML>=3.10
 pyinotify
+pyasyncore>=1.0.2; python_version >= '3.12'
+pycryptodome>=3.9
 python-dotenv
 redis>=2.4.0
 requests>=2.0

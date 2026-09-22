@@ -5,6 +5,7 @@
 
 import abc
 import logging
+import re
 
 from six import integer_types, iteritems, string_types
 
@@ -44,7 +45,14 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         return self.db_connect(self.CONNECTION_NAME)
 
     @staticmethod
-    def _prepare_condition(elements):
+    def _identifier(value):
+        if not isinstance(value, string_types) or not re.match(
+                r'^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\Z', value):
+            raise ValueError('Expected an SQL column identifier')
+        return value
+
+    @classmethod
+    def _prepare_condition(cls, elements):
         if not isinstance(elements, dict):
             raise ValueError("Invalid elements for condition. (elements: %r)" % elements)
 
@@ -52,7 +60,11 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         v   = []
 
         for key, value in iteritems(elements):
+            cls._identifier(key)
             if isinstance(value, (list, tuple)):
+                if not value:
+                    q.append('1 = 0')
+                    continue
                 q.append(("%s IN(" + ", ".join(["?"] * len(value)) + ") ") % key)
                 v.extend(value)
             else:
@@ -64,8 +76,8 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
         return (" AND ".join(q), v)
 
-    @staticmethod
-    def _prepare_cond_like(columns, value):
+    @classmethod
+    def _prepare_cond_like(cls, columns, value):
         if not isinstance(columns, (list, tuple)):
             raise ValueError("Invalid columns for LIKE condition. (columns: %r)" % columns)
 
@@ -76,37 +88,44 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         v   = []
 
         for column in columns:
+            cls._identifier(column)
             q.append("%s LIKE ?" % column)
             v.append("%" + value.replace('%', r'\%').replace('_', r'\_') + "%")
 
         return (" OR ".join(q), v)
 
-    @staticmethod
-    def _prepare_order(clause):
+    @classmethod
+    def _prepare_order(cls, clause):
         if isinstance(clause, string_types):
             clause = ((clause, 'ASC'),)
 
         if not isinstance(clause, (list, tuple)):
             raise ValueError("Invalid clause type. (clause: %r)" % clause)
 
-        return " ORDER BY " + ", ".join(["%s %s" % (k, v) for k, v in clause])
+        parts = []
+        for key, direction in clause:
+            cls._identifier(key)
+            if not isinstance(direction, string_types) or direction.upper() not in ('ASC', 'DESC'):
+                raise ValueError('SQL sort direction must be ASC or DESC')
+            parts.append('%s %s' % (key, direction.upper()))
+        return ' ORDER BY ' + ', '.join(parts)
 
     @staticmethod
     def _prepare_limit(row_count):
-        if not isinstance(row_count, integer_types):
+        if isinstance(row_count, bool) or not isinstance(row_count, integer_types) or row_count < 0:
             raise ValueError("Invalid row_count type. (row_count: %r)" % row_count)
 
         return " LIMIT %d" % row_count
 
     @staticmethod
     def _prepare_offset(offset):
-        if not isinstance(offset, integer_types):
+        if isinstance(offset, bool) or not isinstance(offset, integer_types) or offset < 0:
             raise ValueError("Invalid offset type. (offset: %r)" % offset)
 
         return " OFFSET %d" % offset
 
-    @staticmethod
-    def _validate_columns_values(columns, values):
+    @classmethod
+    def _validate_columns_values(cls, columns, values):
         if not isinstance(columns, (list, tuple)):
             raise ValueError("Invalid columns type. (columns: %r)" % columns)
 
@@ -120,6 +139,8 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
             raise ValueError("Invalid length between columns and values. (columns length: %r, values length: %r)"
                              % (columns_len, values_len))
 
+        for column in columns:
+            cls._identifier(column)
         return columns_len
 
     @classmethod
@@ -172,6 +193,8 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         if not column:
             column = '*'
 
+        if column != '*':
+            self._identifier(column)
         query       = "SELECT COUNT(" + column + ") FROM " + db['cursor'].escape(self.TABLE_NAME)
         cond_values = None
 
@@ -208,10 +231,10 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         if order:
             query          += self._prepare_order(order)
 
-        if limit:
+        if limit is not None:
             query          += self._prepare_limit(limit)
 
-            if offset:
+            if offset is not None:
                 query      += self._prepare_offset(offset)
 
         db['cursor'].query(query,
@@ -257,10 +280,10 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
         if order:
             query          += self._prepare_order(order)
 
-        if limit:
+        if limit is not None:
             query          += self._prepare_limit(limit)
 
-            if offset:
+            if offset is not None:
                 query      += self._prepare_offset(offset)
 
         db['cursor'].query(query,

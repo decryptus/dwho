@@ -123,12 +123,10 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             if 'events' not in value:
                 value['events'] = list(conf['events'])
             else:
-                for event in value['events']:
-                    if not event.startswith('-'):
-                        continue
-                    event = event[1:]
-                    if event in value['events']:
-                        value['events'].remove(event)
+                excluded = set(event[1:] for event in value['events']
+                               if event.startswith('-'))
+                value['events'] = [event for event in value['events']
+                                   if not event.startswith('-') and event not in excluded]
 
             if not value['events']:
                 raise DWhoConfigurationError("Invalid configured events. (events: %r, path: %r)"
@@ -148,12 +146,10 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
                     raise DWhoConfigurationError("Invalid exclude_files type. (exclude_files: %r, path: %r)"
                                                  % (value['exclude_files'], path))
 
-                for exclude_file in value['exclude_files']:
-                    if not exclude_file.startswith('-'):
-                        continue
-                    exclude_file = exclude_file[1:]
-                    if exclude_file in value['exclude_files']:
-                        value['exclude_files'].remove(exclude_file)
+                excluded = set(path[1:] for path in value['exclude_files']
+                               if path.startswith('-'))
+                value['exclude_files'] = [path for path in value['exclude_files']
+                                         if not path.startswith('-') and path not in excluded]
 
             if value['exclude_files']:
                 value['exclude_patterns'] = self.load_exclude_patterns(value['exclude_files'])
@@ -422,25 +418,13 @@ class DWhoInotify(threading.Thread):
         return DWhoInotify.get_flag_value(name) is not None
 
     def get_cfg_path(self, path):
-        if path in self.cfg_paths:
-            LOG.debug("path: %r, wd_path: %r, common: %r",
-                      path,
-                      path.rstrip(os.sep),
-                      os.path.commonprefix([path, path]))
-            return self.cfg_paths[path]
-
-        try:
-            cfg_paths = self.cfg_paths.copy()
-            for wd_path in iterkeys(cfg_paths):
-                if os.path.commonprefix([path, wd_path]) == wd_path.rstrip(os.sep):
-                    LOG.debug("path: %r, wd_path: %r, common: %r",
-                              path,
-                              wd_path.rstrip(os.sep),
-                              os.path.commonprefix([path, wd_path]))
-                    return self.cfg_paths[wd_path]
-        finally:
-            cfg_paths = None
-
+        path = os.path.abspath(path)
+        cfg_paths = self.cfg_paths.copy()
+        # Nested watches must win over their parents, irrespective of order.
+        for wd_path in sorted(cfg_paths, key=lambda p: len(os.path.abspath(p)), reverse=True):
+            root = os.path.abspath(wd_path)
+            if path == root or path.startswith(root.rstrip(os.sep) + os.sep):
+                return cfg_paths[wd_path]
         return None
 
     def __add_watch(self, cfg_path):
@@ -482,11 +466,15 @@ class DWhoInotify(threading.Thread):
                  cfg_path.do_glob)
 
         try:
-            self.wm.rm_watch(cfg_path.path, rec = True, quiet = False)
+            self.wm.rm_watch(self.wm.get_wd(cfg_path.path), rec = True, quiet = False)
         except pyinotify.WatchManagerError as e:
             LOG.exception("Unable to unmonitor. (path: %r, reason: %r)", cfg_path.path, e)
         else:
-            del self.cfg_paths[cfg_path.path]
+            root = os.path.abspath(cfg_path.path)
+            for path in list(self.cfg_paths):
+                normalized = os.path.abspath(path)
+                if normalized == root or normalized.startswith(root.rstrip(os.sep) + os.sep):
+                    del self.cfg_paths[path]
 
     def run(self):
         self.wm         = DWhoInotifyWatchManager()
@@ -582,10 +570,8 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
             conf_path = cfg_path
         else:
             conf_path = copy.copy(cfg_path)
-            plugins   = list(conf_path.plugins)
-            for plugin in plugins:
-                if plugin.PLUGIN_NAME not in include_plugins:
-                    conf_path.plugins.remove(plugin)
+            conf_path.plugins = [plugin for plugin in cfg_path.plugins
+                                 if plugin.PLUGIN_NAME in include_plugins]
 
         if not conf_path.plugins:
             LOG.warning("No plugin included")
