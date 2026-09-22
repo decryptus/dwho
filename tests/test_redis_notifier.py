@@ -31,7 +31,9 @@ class RedisNotifierTests(unittest.TestCase):
         cfg, tpl = copy.deepcopy(self.cfg), copy.deepcopy(self.tpl)
         result = self.notifier('legacy', self.cfg, None, {}, self.tpl)
         self.assertIsNone(result)
-        self.adapter.set_key.assert_called_once_with('alerts', json.dumps(tpl['value']))
+        # Older Python dictionaries (including deepcopy) do not preserve key order.
+        self.adapter.set_key.assert_called_once_with('alerts', mock.ANY)
+        self.assertEqual(json.loads(self.adapter.set_key.call_args[0][1]), tpl['value'])
         self.assertFalse(self.adapter.xadd.called)
         self.assertEqual(self.cfg, cfg)
         self.assertEqual(self.tpl, tpl)
@@ -45,7 +47,8 @@ class RedisNotifierTests(unittest.TestCase):
     def test_stream_serializes_the_same_payload_and_returns_entry_id(self):
         self.cfg['general'].update(redis_mode='stream', stream_maxlen=100)
         self.assertEqual(self.notifier.send('stream', self.cfg, self.tpl), {'notifier': b'123-0'})
-        self.adapter.xadd.assert_called_once_with('alerts', {'payload': json.dumps(self.tpl['value'])}, maxlen=100)
+        self.adapter.xadd.assert_called_once_with('alerts', {'payload': mock.ANY}, maxlen=100)
+        self.assertEqual(json.loads(self.adapter.xadd.call_args[0][1]['payload']), self.tpl['value'])
         self.assertFalse(self.adapter.set_key.called)
         self.adapter.disconnect.assert_called_once_with(prefix='notifier')
 
