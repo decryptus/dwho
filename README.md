@@ -171,6 +171,16 @@ an `xadd()` helper. The existing dependency and Python compatibility ranges rema
 unchanged. Use a new key when migrating from SET: an existing string key is not
 converted, deleted or overwritten if XADD reports `WRONGTYPE`.
 
+Match the client's connection protocol to your server: current redis-py versions
+can default to RESP3, which Redis 5 does not support. With such a client, append
+`protocol=2` to the Redis URL query for Redis 5 (for example
+`redis://127.0.0.1:6379/0?protocol=2&socket_timeout=5`). Old redis-py versions
+already use RESP2 and may not accept this option; omit it for those clients.
+CI tests Redis 5 with both a current client in RESP2 mode and redis-py 2.10.6,
+as well as Redis 7 with the current client's defaults. Connection parameters
+are not silently changed by dwho. Use a client that supports URL timeout options
+when bounded network waits are required.
+
 Server persistence, retention and consumer acknowledgements are separate choices;
 successful XADD does not guarantee survival of a Redis crash or consumer processing.
 No automatic retry, consumer group, Pub/Sub publication or webhook server is added
