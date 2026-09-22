@@ -1,0 +1,110 @@
+name: Foundation regression tests
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  modern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/sonicprobe
+          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          path: dependencies/sonicprobe
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/httpdis
+          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          path: dependencies/httpdis
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install . dependencies/sonicprobe dependencies/httpdis mock
+      - name: Test the installed package outside the checkout
+        run: |
+          cd "$(mktemp -d)"
+          python -m unittest discover -s "$GITHUB_WORKSPACE/tests" -v
+  legacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['2.7.18', '3.5', '3.6', '3.7', '3.8', '3.9']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/sonicprobe
+          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          path: dependencies/sonicprobe
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/httpdis
+          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          path: dependencies/httpdis
+          persist-credentials: false
+      - name: Install and test with the legacy interpreter
+        run: >-
+          docker run --rm -v "$GITHUB_WORKSPACE:/src:ro"
+          python:${{ matrix.python }}
+          bash /src/.github/scripts/test-legacy.sh
+  consumers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/sonicprobe
+          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          path: dependencies/sonicprobe
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/httpdis
+          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          path: dependencies/httpdis
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/covenant
+          ref: 868e6361f744fa2766e5179b8fabd0e5b5298f4c
+          path: consumers/covenant
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/auton
+          ref: bb84fc2761afe486c5587afe2f78debca8f1570d
+          path: consumers/auton
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install . dependencies/sonicprobe dependencies/httpdis covenant==0.0.69 auton==0.3.1 autond==0.3.1
+      - name: Covenant regressions
+        working-directory: consumers/covenant
+        run: python -m unittest discover -s tests -v
+      - name: Auton regressions
+        working-directory: consumers/auton
+        run: python -m unittest discover -s tests -v
+      - name: Load consumer plugins through the installed dwho loader
+        run: |
+          python .github/scripts/check-consumer-plugins.py covenant
+          python .github/scripts/check-consumer-plugins.py auton

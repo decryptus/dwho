@@ -167,9 +167,8 @@ class DWhoAbstractDB(object): # pylint: disable=useless-object-inheritance
         self._db[thread_id] = value
 
     def db_connect(self, name):
-        if not self.db:
-            self.db = {name: {'conn':   None,
-                              'cursor': None}}
+        if name not in self.db:
+            self.db[name] = {'conn': None, 'cursor': None}
 
         if not self.db[name]['conn'] or not self.db[name]['conn'].is_connected(self.db[name]['cursor']):
             if self.db[name]['cursor']:

@@ -25,10 +25,8 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
                 self.connect(name)
 
     def connect(self, name):
-        if not self.servers:
-            self.servers = {name:
-                            {'conn':    None,
-                             'options': {}}}
+        if name not in self.servers:
+            self.servers[name] = {'conn': None, 'options': {}}
 
         if self.servers[name]['conn']:
             return self.servers[name]
