@@ -150,3 +150,5 @@ Publishing (`decryptus/dwho`, `pypi.yml`, environment `pypi`). Existing version 
 are never moved. Ordinary commits on an already tagged version do not republish it.
 
 License: GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+See the [September 2026 code and architecture review](docs/REVIEW.md) (French).
