@@ -1,3 +1,13 @@
+python-dwho (0.3.61) unstable; urgency=medium
+
+  * Add opt-in synchronous send() with explicit delivery outcomes.
+  * Support strict HTTP, Redis and subprocess notifiers through the dispatcher.
+  * Add Redis Streams with acknowledged IDs and optional exact retention.
+  * Preserve legacy callable behavior, Redis SET and older redis-py clients.
+  * Cover notifier failures, Python compatibility, Redis and downstream consumers.
+
+ -- Codex <codex@openai.com>  Tue, 22 Sep 2026 16:50:58 +0000
+
 python-dwho (0.3.59) unstable; urgency=medium
 
   * Fixed threading in dwho.classes.abstract.
