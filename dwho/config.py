@@ -85,7 +85,7 @@ def parse_conf(conf, load_creds = False):
     global _INOTIFY
 
     # Retain the historical lifecycle facade; data-only callers use configuration.
-    conf = configuration.parse_conf(conf, load_creds)
+    conf = configuration._parse_conf(conf, load_creds, globals())
 
     if 'inotify' in conf:
         from dwho.classes import inotify
@@ -185,8 +185,10 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     signal.signal(signal.SIGINT, stop)
 
     parser = parse_conf_func or (lambda conf: parse_conf(conf, load_creds))
-    conf = configuration.read_conf(xfile, parse_conf_func=parser,
-                                   envvar=envvar, custom_file=custom_file)
+    conf = parser(configuration.read_conf_data(xfile, envvar=envvar,
+                                               custom_file=custom_file))
+    for name in configuration.CONFIG_IMPORT_SECTIONS:
+        conf = import_conf_files(name, conf)
 
     init_modules(conf)
     init_plugins(conf)

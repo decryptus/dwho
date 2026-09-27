@@ -201,6 +201,22 @@ class ConfigurationTests(unittest.TestCase):
         modules.assert_called_once_with(result)
         plugins.assert_called_once_with(result)
 
+    def test_legacy_configuration_helpers_remain_overridable(self):
+        with mock.patch.object(config, 'get_server_id', return_value='overridden'), \
+             mock.patch.object(config, 'MAX_BODY_SIZE', 123), \
+             mock.patch.object(config, 'load_credentials', return_value={'test': True}):
+            result = config.parse_conf({'general': {}, 'credentials': 'unused'}, True)
+        self.assertEqual(result['general']['server_id'], 'overridden')
+        self.assertEqual(result['general']['max_body_size'], 123)
+        self.assertEqual(result['credentials'], {'test': True})
+        with mock.patch.object(config.signal, 'signal'), \
+             mock.patch.object(config, 'init_modules'), \
+             mock.patch.object(config, 'init_plugins'), \
+             mock.patch.object(config, '_INOTIFY', None), \
+             mock.patch.object(config, 'import_conf_files', side_effect=lambda name, c: c) as importer:
+            config.load_conf(self.filename, parse_conf_func=lambda c: c)
+        self.assertEqual(importer.call_count, 2)
+
     def test_environment_custom_file_credentials_and_error_identity(self):
         from dwho.errors import DWhoConfigurationError
         from dwho.classes.errors import DWhoConfigurationError as LegacyError

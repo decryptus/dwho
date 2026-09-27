@@ -32,43 +32,48 @@ def get_server_id(conf = None):
     return server_id
 
 def parse_conf(conf, load_creds = False):
+    return _parse_conf(conf, load_creds, globals())
+
+
+def _parse_conf(conf, load_creds, defaults):
+    # The legacy facade supplies its historical overridable defaults/helpers.
     if 'general' not in conf:
         raise DWhoConfigurationError("Missing 'general' section in configuration")
 
     if load_creds and 'credentials' in conf:
-        conf['credentials'] = load_credentials(conf['credentials'],
+        conf['credentials'] = defaults['load_credentials'](conf['credentials'],
                                                conf.get('_config_directory'))
 
-    conf['general']['server_id'] = get_server_id(conf)
+    conf['general']['server_id'] = defaults['get_server_id'](conf)
 
     if not conf['general'].get('max_body_size'):
-        conf['general']['max_body_size'] = MAX_BODY_SIZE
+        conf['general']['max_body_size'] = defaults['MAX_BODY_SIZE']
 
     conf['general']['max_workers'] = helpers.get_nb_workers(conf['general'].get('max_workers'),
                                                             xmin    = 1,
-                                                            default = MAX_WORKERS)
+                                                            default = defaults['MAX_WORKERS'])
 
     if not conf['general'].get('max_requests'):
-        conf['general']['max_requests'] = MAX_REQUESTS
+        conf['general']['max_requests'] = defaults['MAX_REQUESTS']
 
     if not conf['general'].get('max_life_time'):
-        conf['general']['max_life_time'] = MAX_LIFE_TIME
+        conf['general']['max_life_time'] = defaults['MAX_LIFE_TIME']
 
     if 'auth_basic_file' not in conf['general']:
         conf['general']['auth_basic'] = None
         conf['general']['auth_basic_file'] = None
 
     if 'subdir_levels' not in conf['general']:
-        conf['general']['subdir_levels'] = SUBDIR_LEVELS
+        conf['general']['subdir_levels'] = defaults['SUBDIR_LEVELS']
     conf['general']['subdir_levels'] = int(conf['general']['subdir_levels'])
 
     if 'subdir_chars' not in conf['general']:
-        conf['general']['subdir_chars'] = SUBDIR_CHARS
+        conf['general']['subdir_chars'] = defaults['SUBDIR_CHARS']
     conf['general']['subdir_chars'] = set(str(conf['general']['subdir_chars']))
 
     if conf['general']['subdir_levels'] > 10:
         conf['general']['subdir_levels'] = 10
-        LOG.warning("option subdir_levels must not be greater than 10")
+        defaults['LOG'].warning("option subdir_levels must not be greater than 10")
 
     if 'auth_basic' not in conf['general']:
         conf['general']['auth_basic'] = None
@@ -77,7 +82,7 @@ def parse_conf(conf, load_creds = False):
         if isinstance(conf['general']['web_directories'], string_types):
             conf['general']['web_directories'] = [conf['general']['web_directories']]
         elif not isinstance(conf['general']['web_directories'], list):
-            LOG.error('Invalid %s type. (%s: %r, section: %r)',
+            defaults['LOG'].error('Invalid %s type. (%s: %r, section: %r)',
                       'web_directories',
                       'web_directories',
                       conf['general']['web_directories'],
@@ -119,6 +124,18 @@ def read_conf(xfile, parse_conf_func=None, load_creds=False, envvar=None,
     A custom parser replaces the default parser, as in the legacy loader.
     Inotify preparation belongs to the runtime, not to this function.
     """
+    conf = read_conf_data(xfile, envvar=envvar, custom_file=custom_file)
+    if parse_conf_func:
+        conf = parse_conf_func(conf)
+    else:
+        conf = parse_conf(conf, load_creds)
+    for name in CONFIG_IMPORT_SECTIONS:
+        conf = import_conf_files(name, conf)
+    return conf
+
+
+def read_conf_data(xfile, envvar=None, custom_file=None):
+    """Read YAML and optional overrides, before validation or section imports."""
     conf = {'_config_directory': None}
 
     if os.path.exists(xfile):
@@ -139,10 +156,4 @@ def read_conf(xfile, parse_conf_func=None, load_creds=False, envvar=None,
         conf = helpers.load_yaml(os.environ[envvar])
         conf['_config_directory'] = None
 
-    if parse_conf_func:
-        conf = parse_conf_func(conf)
-    else:
-        conf = parse_conf(conf, load_creds)
-    for name in CONFIG_IMPORT_SECTIONS:
-        conf = import_conf_files(name, conf)
     return conf

@@ -68,7 +68,7 @@ class DWhoInotifyCfgPath(object): # pylint: disable=useless-object-inheritance,t
 
 class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
     def __init__(self, plugins=None):
-        self.plugins = INOPLUGS if plugins is None else plugins
+        self.plugins = plugins
 
     @staticmethod
     def load_exclude_patterns(exclude_files):
@@ -95,8 +95,10 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
         return None
 
     def __call__(self, notifier, conf):
+        plugin_registry = INOPLUGS if self.plugins is None else self.plugins
         if 'plugins' not in conf:
-            conf['plugins'] = dict((name, False) for name in self.plugins)
+            conf['plugins'] = (DEFAULT_CONFIG['plugins'].copy() if self.plugins is None
+                               else dict((name, False) for name in plugin_registry))
 
         if 'events' not in conf:
             conf['events'] = list(DEFAULT_CONFIG['events'])
@@ -165,8 +167,8 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
                 for plugin, options in iteritems(value['plugins']):
                     if not options:
                         continue
-                    if plugin in self.plugins:
-                        plugins.append(self.plugins[plugin])
+                    if plugin in plugin_registry:
+                        plugins.append(plugin_registry[plugin])
 
             if not os.path.exists(path):
                 helpers.make_dirs(path)
