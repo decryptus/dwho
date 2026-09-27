@@ -256,3 +256,10 @@ are never moved. Ordinary commits on an already tagged version do not republish 
 License: GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 See the [September 2026 code and architecture review](docs/REVIEW.md) (French).
+
+
+## Explicit runtime composition
+
+Use `dwho.configuration.read_conf` for configuration without process startup,
+and `dwho.runtime.DWhoRuntime` for explicitly owned extension lifecycles.
+See [runtime contexts and compatibility](docs/runtime-contexts.md).
