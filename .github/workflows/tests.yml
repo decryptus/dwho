@@ -63,13 +63,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          ref: 2860136a9e6b6a2890ad36d136493e530fb44ca5
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -94,13 +94,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          ref: 2860136a9e6b6a2890ad36d136493e530fb44ca5
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
           path: dependencies/httpdis
           persist-credentials: false
       - name: Install and test with the legacy interpreter
@@ -118,13 +118,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 23fd66928a2f4fc6129468c7b7a237f88243f8d2
+          ref: 2860136a9e6b6a2890ad36d136493e530fb44ca5
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: a78db44a9fc4bca0fcca1e92ce22175936dc450a
+          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -136,7 +136,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/auton
-          ref: c6f9256710f067cd24a084ed8ecd9a175be97301
+          ref: c98565679ad1738ad51321089dcfaee6e16a6fa8
           path: consumers/auton
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 0c81dd35d69a834b41ac4f53feaf261fefb7618e
+          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5
