@@ -130,19 +130,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/covenant
-          ref: 868e6361f744fa2766e5179b8fabd0e5b5298f4c
+          ref: 59b72ef4ef7987465c840e39215badc87f52eefa
           path: consumers/covenant
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/auton
-          ref: bb84fc2761afe486c5587afe2f78debca8f1570d
+          ref: c6f9256710f067cd24a084ed8ecd9a175be97301
           path: consumers/auton
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m pip install . dependencies/sonicprobe dependencies/httpdis covenant==0.0.69 auton==0.3.1 autond==0.3.1
+      - run: python -m pip install . dependencies/sonicprobe dependencies/httpdis covenant==0.0.70 auton==0.3.1 autond==0.3.1
       - name: Covenant regressions
         working-directory: consumers/covenant
         run: python -m unittest discover -s tests -v
@@ -153,3 +153,27 @@ jobs:
         run: |
           python .github/scripts/check-consumer-plugins.py covenant
           python .github/scripts/check-consumer-plugins.py auton
+
+
+  isolated-contexts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: decryptus/httpdis
+          ref: 0c81dd35d69a834b41ac4f53feaf261fefb7618e
+          path: dependencies/httpdis
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install . dependencies/httpdis sonicprobe==0.3.53 mock
+      - name: Verify installed runtime with candidate HTTPdis contexts
+        run: |
+          cd "$(mktemp -d)"
+          python -c 'from httpdis.httpdis import HttpServerContext'
+          python -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p test_runtime.py -v

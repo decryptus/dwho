@@ -19,6 +19,7 @@ from mako.template import Template
 from dwho.classes.abstract import DWhoAbstractDB
 
 LOG     = logging.getLogger('dwho.modules')
+ROUTE_LIFECYCLE_HOOKS = ('safe_init', 'at_start', 'at_stop')
 
 
 class DWhoModules(dict):
@@ -38,6 +39,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
         return
 
     def __init__(self):
+        self.route_registrar = None
         self.config         = None
         self.charset        = 'utf-8'
         self.content_type   = 'application/json'
@@ -147,7 +149,7 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
                 cmd       = cmd_args.copy()
                 cmd['op'] = op
 
-                for x in ('safe_init', 'at_start', 'at_stop'):
+                for x in ROUTE_LIFECYCLE_HOOKS:
                     if i != 0:
                         cmd[x] = None
                     elif value.get(x):
@@ -156,7 +158,8 @@ class DWhoModuleBase(object): # pylint: disable=useless-object-inheritance
                         else:
                             cmd[x] = getattr(self, value[x])
 
-                httpdis.register(**cmd)
+                registrar = self.route_registrar or httpdis.register
+                registrar(**cmd)
 
 
 class DWhoModuleSQLBase(DWhoModuleBase, DWhoAbstractDB):
@@ -231,3 +234,4 @@ class DWhoModuleWebBase(DWhoModuleBase):
                                          output_encoding    = self.get_charset())
 
         return self
+

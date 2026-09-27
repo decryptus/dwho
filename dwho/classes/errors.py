@@ -6,11 +6,8 @@
 from pyinotify import PyinotifyError
 
 
-class DWhoError(Exception):
-    pass
-
-class DWhoConfigurationError(DWhoError):
-    pass
+from dwho.errors import DWhoError, DWhoConfigurationError
 
 class DWhoInotifyError(PyinotifyError):
     pass
+

@@ -67,6 +67,9 @@ class DWhoInotifyCfgPath(object): # pylint: disable=useless-object-inheritance,t
 
 
 class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
+    def __init__(self, plugins=None):
+        self.plugins = plugins
+
     @staticmethod
     def load_exclude_patterns(exclude_files):
         r = set()
@@ -92,8 +95,10 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
         return None
 
     def __call__(self, notifier, conf):
+        plugin_registry = INOPLUGS if self.plugins is None else self.plugins
         if 'plugins' not in conf:
-            conf['plugins'] = DEFAULT_CONFIG['plugins'].copy()
+            conf['plugins'] = (DEFAULT_CONFIG['plugins'].copy() if self.plugins is None
+                               else dict((name, False) for name in plugin_registry))
 
         if 'events' not in conf:
             conf['events'] = list(DEFAULT_CONFIG['events'])
@@ -162,8 +167,8 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
                 for plugin, options in iteritems(value['plugins']):
                     if not options:
                         continue
-                    if plugin in INOPLUGS:
-                        plugins.append(INOPLUGS[plugin])
+                    if plugin in plugin_registry:
+                        plugins.append(plugin_registry[plugin])
 
             if not os.path.exists(path):
                 helpers.make_dirs(path)
@@ -364,6 +369,7 @@ class DWhoInotify(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
 
+        self.command_queue = DWHO_INOQ
         self.config      = None
         self.killed      = False
         self.cfg_paths   = {}
@@ -484,7 +490,7 @@ class DWhoInotify(threading.Thread):
 
         while not self.killed:
             try:
-                (mode, cfg_path) = DWHO_INOQ.get(True, 0.5)
+                (mode, cfg_path) = self.command_queue.get(True, 0.5)
                 self.scan_event.clear()
                 if mode == MODE_ADD:
                     self.__add_watch(cfg_path)
@@ -619,3 +625,17 @@ class DWhoInotifyEventHandler(pyinotify.ProcessEvent):
 
     def process_default(self, event):
         LOG.debug("DWhoInotifyEvent reports that an unsupported event has occurred. (event: %r)", event)
+
+
+
+class DWhoInotifyContext(DWhoInotify):
+    """Instance-owned command queue; legacy static add/rem remain unchanged."""
+    def __init__(self):
+        DWhoInotify.__init__(self)
+        self.command_queue = _queue.Queue()
+
+    def add(self, cfg_path):
+        self.command_queue.put((MODE_ADD, cfg_path))
+
+    def rem(self, cfg_path):
+        self.command_queue.put((MODE_REM, cfg_path))

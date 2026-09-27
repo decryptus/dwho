@@ -21,6 +21,8 @@ from httpdis.config import get_default_options
 from sonicprobe import helpers
 from sonicprobe.libs import keystore, network
 from dwho.classes.errors import DWhoConfigurationError
+from dwho import configuration
+from dwho.configuration import read_conf
 from dwho.classes.inoplugs import INOPLUGS
 from dwho.classes.modules import MODULES
 from dwho.classes.plugins import PLUGINS
@@ -82,59 +84,8 @@ def get_inotify_instance():
 def parse_conf(conf, load_creds = False):
     global _INOTIFY
 
-    if 'general' not in conf:
-        raise DWhoConfigurationError("Missing 'general' section in configuration")
-
-    if load_creds and 'credentials' in conf:
-        conf['credentials'] = load_credentials(conf['credentials'],
-                                               conf.get('_config_directory'))
-
-    conf['general']['server_id'] = get_server_id(conf)
-
-    if not conf['general'].get('max_body_size'):
-        conf['general']['max_body_size'] = MAX_BODY_SIZE
-
-    conf['general']['max_workers'] = helpers.get_nb_workers(conf['general'].get('max_workers'),
-                                                            xmin    = 1,
-                                                            default = MAX_WORKERS)
-
-    if not conf['general'].get('max_requests'):
-        conf['general']['max_requests'] = MAX_REQUESTS
-
-    if not conf['general'].get('max_life_time'):
-        conf['general']['max_life_time'] = MAX_LIFE_TIME
-
-    if 'auth_basic_file' not in conf['general']:
-        conf['general']['auth_basic'] = None
-        conf['general']['auth_basic_file'] = None
-
-    if 'subdir_levels' not in conf['general']:
-        conf['general']['subdir_levels'] = SUBDIR_LEVELS
-    conf['general']['subdir_levels'] = int(conf['general']['subdir_levels'])
-
-    if 'subdir_chars' not in conf['general']:
-        conf['general']['subdir_chars'] = SUBDIR_CHARS
-    conf['general']['subdir_chars'] = set(str(conf['general']['subdir_chars']))
-
-    if conf['general']['subdir_levels'] > 10:
-        conf['general']['subdir_levels'] = 10
-        LOG.warning("option subdir_levels must not be greater than 10")
-
-    if 'auth_basic' not in conf['general']:
-        conf['general']['auth_basic'] = None
-
-    if 'web_directories' in conf['general']:
-        if isinstance(conf['general']['web_directories'], string_types):
-            conf['general']['web_directories'] = [conf['general']['web_directories']]
-        elif not isinstance(conf['general']['web_directories'], list):
-            LOG.error('Invalid %s type. (%s: %r, section: %r)',
-                      'web_directories',
-                      'web_directories',
-                      conf['general']['web_directories'],
-                      'general')
-            conf['general']['web_directories'] = []
-    else:
-        conf['general']['web_directories'] = []
+    # Retain the historical lifecycle facade; data-only callers use configuration.
+    conf = configuration._parse_conf(conf, load_creds, globals())
 
     if 'inotify' in conf:
         from dwho.classes import inotify
@@ -233,35 +184,11 @@ def load_conf(xfile, options = None, parse_conf_func = None, load_creds = False,
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
 
-    conf = {'_config_directory': None}
-
-    if os.path.exists(xfile):
-        with open(xfile, 'r') as f:
-            conf = helpers.load_yaml(f)
-
-        config_directory = os.path.dirname(os.path.abspath(xfile))
-        conf['_config_directory'] = config_directory
-
-        if custom_file:
-            conf = helpers.merge(
-                helpers.load_conf_yaml_file(
-                    custom_file,
-                    config_directory),
-                conf)
-            conf['_config_directory'] = config_directory
-    elif envvar and os.environ.get(envvar):
-        c = StringIO(os.environ[envvar])
-        conf = helpers.load_yaml(c.getvalue())
-        c.close()
-        conf['_config_directory'] = None
-
-    if parse_conf_func:
-        conf = parse_conf_func(conf)
-    else:
-        conf = parse_conf(conf, load_creds)
-
-    for x in ('modules', 'plugins'):
-        conf = import_conf_files(x, conf)
+    parser = parse_conf_func or (lambda conf: parse_conf(conf, load_creds))
+    conf = parser(configuration.read_conf_data(xfile, envvar=envvar,
+                                               custom_file=custom_file))
+    for name in configuration.CONFIG_IMPORT_SECTIONS:
+        conf = import_conf_files(name, conf)
 
     init_modules(conf)
     init_plugins(conf)
@@ -292,3 +219,4 @@ def make_logdir(logfile, uid, gid):
     if logdir and not os.path.exists(logdir):
         helpers.make_dirs(logdir)
         os.chown(logdir, uid, gid)
+
