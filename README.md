@@ -263,3 +263,8 @@ See the [September 2026 code and architecture review](docs/REVIEW.md) (French).
 Use `dwho.configuration.read_conf` for configuration without process startup,
 and `dwho.runtime.DWhoRuntime` for explicitly owned extension lifecycles.
 See [runtime contexts and compatibility](docs/runtime-contexts.md).
+
+## Terminal interfaces
+
+See [shared CLI and ncurses primitives](docs/terminal.md) for the optional terminal
+presentation modules and the CertLord service integration example.
