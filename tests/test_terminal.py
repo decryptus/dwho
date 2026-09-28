@@ -5,10 +5,10 @@ import json
 import subprocess
 import sys
 import unittest
-if sys.version_info < (3, 5):
-    raise unittest.SkipTest('Curses widgets require Python 3.5+')
-
-from unittest.mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from dwho.cli import write_json, require_terminal
 from dwho import tui
@@ -39,6 +39,7 @@ class Screen:
         return next(self.keys)
 
 
+@unittest.skipIf(sys.version_info < (3, 5), 'Curses widgets require Python 3.5+')
 class TerminalTests(unittest.TestCase):
     def test_imports_and_cli_work_with_optional_components_blocked(self):
         script = '''
