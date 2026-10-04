@@ -8,6 +8,7 @@ from six import string_types
 from sonicprobe import helpers
 from sonicprobe.libs import network
 from dwho.errors import DWhoConfigurationError
+from dwho.configuration_schema import validate_configuration, validate_mapping
 
 LOG = logging.getLogger('dwho.configuration')
 MAX_BODY_SIZE = 8388608
@@ -36,9 +37,12 @@ def parse_conf(conf, load_creds = False):
 
 
 def _parse_conf(conf, load_creds, defaults):
+    validate_mapping(conf)
     # The legacy facade supplies its historical overridable defaults/helpers.
     if 'general' not in conf:
         raise DWhoConfigurationError("Missing 'general' section in configuration")
+
+    validate_configuration(conf)
 
     if load_creds and 'credentials' in conf:
         conf['credentials'] = defaults['load_credentials'](conf['credentials'],
@@ -140,7 +144,7 @@ def read_conf_data(xfile, envvar=None, custom_file=None):
 
     if os.path.exists(xfile):
         with open(xfile, 'r') as f:
-            conf = helpers.load_yaml(f)
+            conf = validate_mapping(helpers.load_yaml(f))
 
         config_directory = os.path.dirname(os.path.abspath(xfile))
         conf['_config_directory'] = config_directory
@@ -153,7 +157,7 @@ def read_conf_data(xfile, envvar=None, custom_file=None):
                 conf)
             conf['_config_directory'] = config_directory
     elif envvar and os.environ.get(envvar):
-        conf = helpers.load_yaml(os.environ[envvar])
+        conf = validate_mapping(helpers.load_yaml(os.environ[envvar]))
         conf['_config_directory'] = None
 
     return conf
