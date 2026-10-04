@@ -268,3 +268,6 @@ See [runtime contexts and compatibility](docs/runtime-contexts.md).
 
 See [shared CLI and ncurses primitives](docs/terminal.md) for the optional terminal
 presentation modules and the CertLord service integration example.
+
+See [configuration validation](docs/configuration-validation.md) for YAML schema
+coverage and compatibility.

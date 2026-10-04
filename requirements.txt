@@ -9,4 +9,4 @@ python-dotenv
 redis>=2.4.0
 requests>=2.0
 six>=1.13.0
-sonicprobe>=0.3.52
+sonicprobe>=0.3.57

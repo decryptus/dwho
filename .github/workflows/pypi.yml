@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 2860136a9e6b6a2890ad36d136493e530fb44ca5
+          ref: 3dd5c8f01654bd6eb1bb7d521cc3da4bcd3b9817
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
