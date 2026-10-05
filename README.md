@@ -148,7 +148,7 @@ general:
   template: /etc/my-service/templates/event.json
 ```
 
-```json
+```text
 {"key": "monitoring:alerts", "value": ${json.dumps(_VARS_)}}
 ```
 
@@ -229,35 +229,6 @@ e.g. `jobs.id`); sorting accepts `ASC` or `DESC`. SQL expressions in these field
 are now rejected. Empty `IN` lists match nothing. A zero limit returns no rows.
 Use explicit reviewed queries through the SQL adapter for expression-based queries.
 
-## Development and releases
-
-```sh
-python -m pip install -e . mock
-python -m unittest discover -s tests -v
-python -m pip install build twine
-python -m build
-python -m twine check --strict dist/*
-```
-
-Tests use temporary files, SQLite, mocked Redis and actual local subprocesses.
-CI also exercises SET and Streams against disposable Redis 5 and Redis 7 services.
-To run those integration tests locally, point `DWHO_REDIS_TEST_URL` at a disposable
-server and run `python -m unittest discover -s tests -p test_redis_integration.py -v`.
-Only UUID-prefixed test keys are created/deleted; the database is never flushed.
-No production service is contacted. See `.github/workflows/tests.yml` for the
-compatibility matrix and `.github/workflows/pypi.yml` for release gates.
-
-To release, update `VERSION`, `RELEASE` and both version fields in `setup.yml`
-together, then merge the tested PR. The publication workflow validates the package,
-creates `vX.Y.Z` on master and publishes the same artifacts using PyPI Trusted
-Publishing (`decryptus/dwho`, `pypi.yml`, environment `pypi`). Existing version tags
-are never moved. Ordinary commits on an already tagged version do not republish it.
-
-License: GPL-3.0-or-later. See [LICENSE](LICENSE).
-
-See the [September 2026 code and architecture review](docs/REVIEW.md) (French).
-
-
 ## Explicit runtime composition
 
 Use `dwho.configuration.read_conf` for configuration without process startup,
@@ -271,3 +242,8 @@ presentation modules and the CertLord service integration example.
 
 See [configuration validation](docs/configuration-validation.md) for YAML schema
 coverage and compatibility.
+
+## Documentation
+
+- **Users:** installation, configuration, operation and API usage in this README and the user guide.
+- **Contributors:** [architecture, tests and development](https://github.com/decryptus/dwho/blob/master/CONTRIBUTING.md).
