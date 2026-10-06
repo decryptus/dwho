@@ -40,6 +40,7 @@ LOG = logging.getLogger('dwho.notifiers')
 HTTP_ALLOWED_METHODS = ('delete', 'head', 'get', 'patch', 'post', 'put')
 DEFAULT_TIMEOUT      = 30
 PARSE_TAGS           = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,29}[a-zA-Z0-9]$').match
+STRICT_TAGS          = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,29}[a-zA-Z0-9]\Z')
 
 
 class DWhoNotifiers(dict):
@@ -194,7 +195,15 @@ class DWhoPushNotifications(object): # pylint: disable=useless-object-inheritanc
         if not names or not isinstance(names, (list, tuple, set)):
             names = self.notif_names
 
-        tags = self._parse_tags(tags)
+        if strict and tags is not None:
+            if not isinstance(tags, (list, tuple, set)) or not tags:
+                raise ValueError('tags must be a nonempty collection')
+            if any(not isinstance(tag, string_types) or not STRICT_TAGS.match(tag)
+                   for tag in tags):
+                raise ValueError('invalid notification tag')
+            tags = set(tags)
+        else:
+            tags = self._parse_tags(tags)
         names = self._select(names, tags, strict)
         results = {}
 

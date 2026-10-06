@@ -18,6 +18,13 @@ LOCK_TIMEOUT    = 60
 LOG             = logging.getLogger('dwho.inoplugs')
 
 
+def inoplug_enabled(options, default=False):
+    """Resolve the shared boolean/mapping contract without truthy coercion."""
+    if isinstance(options, dict):
+        return options.get('enabled', default) is True
+    return options is True
+
+
 class DWhoInoPlugs(dict):
     def register(self, plugin):
         if not isinstance(plugin, DWhoInoPlugBase):
@@ -80,9 +87,9 @@ class DWhoInoPlugBase(object): # pylint: disable=useless-object-inheritance
             return self
 
         self.plugconf       = config['inotify']['plugins'][self.PLUGIN_NAME]
+        self.enabled        = inoplug_enabled(self.plugconf)
 
         if isinstance(self.plugconf, bool):
-            self.enabled    = self.plugconf
             return self
 
         if not isinstance(self.plugconf, dict):
@@ -91,9 +98,6 @@ class DWhoInoPlugBase(object): # pylint: disable=useless-object-inheritance
 
         if 'autostart' in self.plugconf:
             self.autostart  = bool(self.plugconf['autostart'])
-
-        if 'enabled' in self.plugconf:
-            self.enabled    = bool(self.plugconf['enabled'])
 
         return self
 

@@ -72,8 +72,9 @@ class DWhoRuntime(object):
                 self.inotify.init(self.configuration)
                 for plugin in self.inoplugs.values():
                     plugin.init(self.configuration)
-                    self._callbacks.append(plugin.at_stop)
-                    plugin.safe_init()
+                    if plugin.enabled:
+                        self._callbacks.append(plugin.at_stop)
+                        plugin.safe_init()
             self.state = 'ready'
         except BaseException:
             self._cleanup_after_failure()

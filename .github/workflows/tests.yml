@@ -63,13 +63,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 3dd5c8f01654bd6eb1bb7d521cc3da4bcd3b9817
+          ref: 144891d8f002ba1f0b2b7e7c0ac997205037a62b
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
+          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -95,13 +95,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 3dd5c8f01654bd6eb1bb7d521cc3da4bcd3b9817
+          ref: 144891d8f002ba1f0b2b7e7c0ac997205037a62b
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
+          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
           path: dependencies/httpdis
           persist-credentials: false
       - name: Install and test with the legacy interpreter
@@ -119,13 +119,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/sonicprobe
-          ref: 3dd5c8f01654bd6eb1bb7d521cc3da4bcd3b9817
+          ref: 144891d8f002ba1f0b2b7e7c0ac997205037a62b
           path: dependencies/sonicprobe
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
+          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -168,7 +168,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 22a9ebdd6ac014df68ae40f891e16742cb1c4fa9
+          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5

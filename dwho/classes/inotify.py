@@ -19,7 +19,7 @@ from sonicprobe import helpers
 from sonicprobe.libs.workerpool import WorkerPool
 
 from dwho.classes.errors import DWhoConfigurationError, DWhoInotifyError
-from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT
+from dwho.classes.inoplugs import CACHE_EXPIRE, INOPLUGS, LOCK_TIMEOUT, inoplug_enabled
 
 LOG             = logging.getLogger('dwho.inotify')
 
@@ -165,7 +165,11 @@ class DWhoInotifyConfig(object): # pylint: disable=useless-object-inheritance
             plugins = []
             if value['plugins']:
                 for plugin, options in iteritems(value['plugins']):
-                    if not options:
+                    # A path can restrict global enablement, never override a
+                    # global disable. Nonempty option-only path mappings retain
+                    # their historical selection behavior.
+                    if not inoplug_enabled(conf['plugins'].get(plugin)) \
+                       or not inoplug_enabled(options, default=bool(options)):
                         continue
                     if plugin in plugin_registry:
                         plugins.append(plugin_registry[plugin])
@@ -530,6 +534,9 @@ class DWhoInotifyPlugs(threading.Thread):
         for plugin in self.cfg_path.plugins:
             plug = None
             try:
+                if not plugin.enabled or not inoplug_enabled(
+                        self.config['inotify'].get('plugins', {}).get(plugin.PLUGIN_NAME)):
+                    continue
                 plug      = copy.copy(plugin)
                 self.name = "%s:%s" % (self.THREADNAME, plug.PLUGIN_NAME)
 

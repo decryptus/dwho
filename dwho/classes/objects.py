@@ -89,8 +89,8 @@ class DWhoObjectSQLBase(DWhoAbstractDB):
 
         for column in columns:
             cls._identifier(column)
-            q.append("%s LIKE ?" % column)
-            v.append("%" + value.replace('%', r'\%').replace('_', r'\_') + "%")
+            q.append("%s LIKE ? ESCAPE '!'" % column)
+            v.append("%" + value.replace('!', '!!').replace('%', '!%').replace('_', '!_') + "%")
 
         return (" OR ".join(q), v)
 
