@@ -74,3 +74,12 @@ To verify an installed wheel, run these commands from a temporary directory,
 using absolute paths for the guard and discovery roots. Do not add the checkout
 to `PYTHONPATH`. Build documentation from `docs` with
 `python -m sphinx -W --keep-going -b html . /tmp/dwho-docs`.
+
+## Post-audit integration — 2026-10-07
+
+The candidate now includes published DWho 0.3.64, HTTPdis 0.6.34 and
+Sonicprobe 0.3.58 compatibility fixes. DWho 0.3.65 is reserved for this optional
+Textual integration. The previous validation above is a historical record;
+current interpreter and distribution checks are recorded in the pull request.
+Auton and monit-docker now have separate read-only consumer adapters.
+Publication remains subject to the agreed visual acceptance.

@@ -137,6 +137,8 @@ def init_inotify(conf):
     for name, inoplug in iteritems(INOPLUGS):
         LOG.info("inoplug init: %r", name)
         inoplug.init(conf)
+        if not inoplug.enabled:
+            continue
         LOG.info("inoplug safe_init: %r", name)
         inoplug.safe_init()
         DWHO_THREADS.append(inoplug.at_stop)
@@ -219,4 +221,3 @@ def make_logdir(logfile, uid, gid):
     if logdir and not os.path.exists(logdir):
         helpers.make_dirs(logdir)
         os.chown(logdir, uid, gid)
-

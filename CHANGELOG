@@ -1,3 +1,29 @@
+python-dwho (0.3.65) unstable; urgency=medium
+
+  * Add optional shared Textual dashboards, widgets and offline demonstration.
+  * Preserve base CLI/curses imports and separate product operations from presentation.
+  * Reconcile with all published 0.3.64 audit corrections.
+
+ -- Codex <codex@openai.com>  Wed, 07 Oct 2026 02:00:00 +0200
+
+python-dwho (0.3.64) unstable; urgency=medium
+
+  * Do not initialize or execute disabled inotify plugins.
+  * Reject invalid notification filters instead of broadening delivery.
+  * Clean up failed runtime startup while preserving the original error.
+  * Escape literal SQL LIKE wildcards and cover audit regressions.
+
+ -- Codex <codex@openai.com>  Tue, 06 Oct 2026 12:00:00 +0000
+
+python-dwho (0.3.64) unstable; urgency=medium
+
+  * Do not initialize or execute disabled inotify plugins.
+  * Reject invalid notification filters instead of broadening delivery.
+  * Clean up failed runtime startup while preserving the original error.
+  * Escape literal SQL LIKE wildcards and cover audit regressions.
+
+ -- Codex <codex@openai.com>  Tue, 06 Oct 2026 12:00:00 +0000
+
 python-dwho (0.3.62) unstable; urgency=medium
 
   * Separate configuration data preparation from process startup.
