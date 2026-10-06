@@ -30,6 +30,7 @@ setup(
     url                           = setup_cfg['url'],
     packages                      = find_packages(),
     install_requires              = requirements,
+    extras_require                = {'textual': ["textual>=8.2.8,<9; python_version >= '3.9'"]},
     python_requires               = ', '.join(setup_cfg['python_requires']),
     classifiers                   = setup_cfg['classifiers'],
     long_description              = long_desc,

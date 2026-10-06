@@ -8,6 +8,9 @@ Python 3.5+ and a Python build with curses; applications own `curses.wrapper`.
 
 ## Current scope
 
+Modern dashboards can use the optional [Textual presentation](textual.md),
+which requires Python 3.9+. The primitives below retain their existing API.
+
 - `write_json(value, stream=None, **options)`: the existing JSON serialization
   options, one trailing newline, dynamic stdout or an explicit output stream.
   The application must redact sensitive data before calling it.

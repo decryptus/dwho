@@ -185,7 +185,7 @@ epub_exclude_files = ['search.html']
 #napoleon_numpy_docstring = False
 
 # Keep both documentation audiences explicit on every generated page.
-html_context = {'contributor_index': 'contributors', 'contributor_pages': ['contributors', 'contributing', 'REVIEW', 'architecture-review-2026-09-27']}
+html_context = {'contributor_index': 'contributors', 'contributor_pages': ['contributors', 'contributing', 'REVIEW', 'architecture-review-2026-09-27', 'textual-review-2026-10-06']}
 html_sidebars = {'**': ['about.html', 'documentation-tracks.html', 'localtoc.html', 'searchbox.html']}
 
 REPOSITORY_DOCUMENTATION_URL = 'https://github.com/decryptus/dwho/blob/master/'

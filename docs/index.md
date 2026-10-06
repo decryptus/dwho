@@ -11,6 +11,7 @@ Installation, configuration, public APIs and troubleshooting.
 
    runtime-contexts
    terminal
+   textual
    configuration-validation
 
 
