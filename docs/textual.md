@@ -1,11 +1,11 @@
 # Optional Textual dashboards
 
-The candidate `dwho.tui.textual` package provides a shared terminal presentation
+The optional `dwho.tui.textual` package provides a shared terminal presentation
 for modern applications. It requires **Python 3.9+** and **Textual 8.2.8–8.x**.
-It is not yet included in a published DWho release. From this candidate checkout:
+Install the Textual extra (product palettes require DWho 0.3.66+):
 
 ```sh
-python -m pip install '.[textual]'
+python -m pip install 'dwho[textual]>=0.3.66'
 python -m dwho.tui.textual.demo
 ```
 
@@ -13,6 +13,28 @@ The demo uses synthetic container and job data. It connects to no service and
 performs no intervention. `/` focuses search, Escape clears it, `q` quits, and
 `c` opens a demonstration confirmation. Use at least 80 columns by 24 rows;
 120 columns or more gives the details panel more room.
+
+## Product colors
+
+Dashboards select their palette from the product name, ignoring letter case:
+
+| Product | Palette |
+| --- | --- |
+| Atraxis | Midnight blue / cyan |
+| Auton | Turquoise / orange |
+| monit-docker | Steel blue |
+| Galliflow | Violet |
+| CertLord | Gold / charcoal |
+
+Navigation, tables, input forms and confirmation dialogs share that palette.
+Layout and shortcuts stay the same. Status labels keep their shared meaning:
+blue acceptance/queue, violet in progress, green confirmed success, amber warning
+or unknown outcome, and red failure/refusal. Product accents never indicate success.
+
+Unknown product names use the default blue. For a customized product label, pass
+`palette='auton'` (or `atraxis`, `monit-docker`, `galliflow`, `certlord`, `default`)
+to `DashboardApp`. An invalid explicit palette raises `ValueError`.
+Themes are independent per application instance.
 
 ## Integration
 
