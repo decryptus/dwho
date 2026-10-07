@@ -1,5 +1,5 @@
 Contributor documentation
-==================
+=========================
 Architecture, implementation, tests and project maintenance.
 For installation and operation, return to :doc:`/index`.
 
