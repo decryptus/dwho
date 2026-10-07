@@ -46,7 +46,7 @@ class TerminalTests(unittest.TestCase):
 import builtins, io, sys
 original = builtins.__import__
 def guarded(name, *args, **kwargs):
-    if name.split('.')[0] in ('curses', 'httpdis', 'redis', 'sonicprobe'):
+    if name.split('.')[0] in ('curses', 'textual', 'rich', 'httpdis', 'redis', 'sonicprobe'):
         raise AssertionError(name)
     return original(name, *args, **kwargs)
 builtins.__import__ = guarded
@@ -56,6 +56,7 @@ output = io.StringIO()
 write_json({'ok': True}, stream=output)
 assert output.getvalue() == '{"ok": true}\\n'
 assert 'curses' not in sys.modules
+assert 'textual' not in sys.modules
 '''
         subprocess.run([sys.executable, '-c', script], check=True)
 

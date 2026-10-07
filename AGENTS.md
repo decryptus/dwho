@@ -42,6 +42,15 @@ See [the architecture review](docs/architecture-review-2026-09-27.md).
 
 ## Test discovery and execution
 
+- New modern TUIs should reuse the optional `dwho.tui.textual` presentation
+  components. Keep product data collection, authorization, rules and execution
+  outside them. A visual mode label or confirmation is not a safety boundary.
+- Do not import Textual or Rich from base CLI/curses modules. Textual requires
+  Python 3.9+; preserve base interpreter support and existing consumer interfaces
+  until consumer-specific parity checks permit migration.
+- Run the optional `textual_tests` discovery root separately with the Textual
+  extra installed. Distinguish request acceptance, execution and final result.
+
 - Verify the actual runner and every discovery root before adding or changing
   tests. A green command does not prove that all test declarations were loaded.
   Do not put standalone pytest functions into a suite run only by unittest.

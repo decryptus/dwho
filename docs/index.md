@@ -13,6 +13,7 @@ Installation, configuration, public APIs and troubleshooting.
    audit-compatibility
    runtime-contexts
    terminal
+   textual
    configuration-validation
 
 

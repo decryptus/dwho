@@ -1,6 +1,5 @@
 Contributor documentation
 =========================
-
 Architecture, implementation, tests and project maintenance.
 For installation and operation, return to :doc:`/index`.
 
@@ -11,4 +10,5 @@ For installation and operation, return to :doc:`/index`.
    contributing
    REVIEW
    architecture-review-2026-09-27
+   textual-review-2026-10-06
    audit-corrections-2026-10-07
