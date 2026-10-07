@@ -19,6 +19,8 @@ except ImportError:
 
 from .widgets import Confirmation, DetailPanel, MetricCard, StatusLine, plain_text
 from .dashboard import DashboardApp, TableRow
+from .forms import InputForm
+from .service import ServiceDashboard
 
-__all__ = ['Confirmation', 'DashboardApp', 'DetailPanel', 'MetricCard',
+__all__ = ['ServiceDashboard', 'InputForm', 'Confirmation', 'DashboardApp', 'DetailPanel', 'MetricCard',
            'StatusLine', 'TableRow', 'plain_text']

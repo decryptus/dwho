@@ -152,7 +152,8 @@ class DashboardApp(App):
             self.post_message(self.SelectionChanged(event.row_key.value))
 
     def on_input_changed(self, event):
-        self._render_rows()
+        if event.input.has_class('dw-search'):
+            self._render_rows()
 
     def on_button_pressed(self, event):
         if not event.button.has_class('dw-nav'):

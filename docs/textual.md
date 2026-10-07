@@ -70,6 +70,16 @@ thread with network requests or commands.
   `app.push_screen(dialog, callback)`. The callback receives a boolean intent;
   Cancel is focused initially and Escape returns `False`.
 
+- `InputForm(title, fields, hint='', submit='Continue')`: fields are tuples of
+  `(key, label, initial_value, secret)`. The callback receives a dictionary of
+  literal values, or `None` on cancellation. Services must validate the values.
+- `ServiceDashboard.perform(call, done, failed=None, label=...)`: runs one blocking
+  service call in a background thread and returns its result to the UI thread.
+  Concurrent requests are refused; errors never trigger a retry. The application
+  supplies safe error presentation and remains responsible for request deadlines.
+  Ordinary quit waits for the pending request; forced process termination cannot
+  establish the remote outcome.
+
 States include `info`, `accepted`, `queued`, `running`, `success`, `warning`,
 `unknown`, `failure` and `denied`. Text accompanies the color, and acceptance is
 distinct from success. Unrecognized states display as unknown.
