@@ -12,7 +12,7 @@ class InputForm(ModalScreen):
     DEFAULT_CSS = '''
     InputForm { align: center middle; background: #000000 65%; }
     .dw-form { width: 80; max-width: 95%; height: auto; max-height: 90%;
-        padding: 1 2; background: #14253b; border: round #638fb4; }
+        padding: 1 2; background: $panel; border: round $primary; }
     .dw-fields { height: auto; max-height: 25; }
     .dw-form Static { height: auto; margin-top: 1; }
     .dw-form Input { height: 3; }

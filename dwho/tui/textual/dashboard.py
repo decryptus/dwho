@@ -9,7 +9,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.widgets import Button, DataTable, Footer, Input, Static
 
-from .theme import MODE_LABELS, SHELL_CSS
+from .theme import MODE_LABELS, SHELL_CSS, product_theme
 from .widgets import DetailPanel, MetricCard, StatusLine, plain_text
 
 TableRow = namedtuple('TableRow', 'key cells title details')
@@ -45,7 +45,7 @@ class DashboardApp(App):
             self.key = key
 
     def __init__(self, product, heading, columns, navigation=(), mode='read_only',
-                 subtitle='', metrics=(), **kwargs):
+                 subtitle='', metrics=(), palette=None, **kwargs):
         if mode not in MODE_LABELS:
             raise ValueError('invalid_dashboard_mode')
         if not 1 <= len(columns) <= MAX_COLUMNS:
@@ -55,7 +55,10 @@ class DashboardApp(App):
             raise ValueError('invalid_dashboard_navigation')
         if len(metrics) > MAX_METRICS:
             raise ValueError('too_many_dashboard_metrics')
+        theme = product_theme(product, palette)
         super(DashboardApp, self).__init__(**kwargs)
+        self.register_theme(theme)
+        self.theme = theme.name
         self.product, self.heading, self.subtitle = product, heading, subtitle
         self.columns, self.navigation, self.mode = tuple(columns), nav, mode
         self.metrics = tuple(metrics)
