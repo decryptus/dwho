@@ -209,6 +209,11 @@ incorrect keys and legacy tokens are rejected by the authenticated reader.
 are encoded as UTF-8 and decrypted output is bytes. JSON preserves JSON types,
 not arbitrary Python objects.
 
+Starting in 0.3.67, legacy writes through `encrypt` or `serialize` emit a
+Python `DeprecationWarning`. Run your test suite with `-Wd` to find these
+calls. Use `encrypt_authenticated` for bytes and `serialize_authenticated`
+for JSON-compatible values. Legacy reads continue to work without a warning.
+
 Existing `encrypt` / `decrypt` retain the historical CBC wire format and key
 truncation, including its unusual treatment of exactly 24/32 byte keys. CBC does
 **not** authenticate data. `serialize` uses pickle protocol 2 for legacy readers.

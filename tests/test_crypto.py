@@ -1,6 +1,7 @@
 import base64
 import pickle
 import unittest
+import warnings
 from Crypto.Cipher import AES
 from dwho.helpers.crypto import DWhoCryptoHelper as Crypto
 
@@ -8,6 +9,33 @@ class CustomObject(object):
     pass
 
 class CryptoTests(unittest.TestCase):
+    def test_legacy_writes_warn_once_per_call(self):
+        key = b'k' * 16
+        for writer, data in ((Crypto.encrypt, b'old'), (Crypto.serialize, {'old': 1})):
+            with warnings.catch_warnings(record=True) as seen:
+                warnings.simplefilter('always', DeprecationWarning)
+                writer(key, data)
+            self.assertEqual(len(seen), 1)
+            self.assertIs(seen[0].category, DeprecationWarning)
+
+    def test_migrate_records_written_by_0_3_66(self):
+        # Fixed outputs from the published 0.3.66 writers. A 32-byte legacy key
+        # exercises CBC's historical truncation when reading these records.
+        old_key = b'legacy-fixture-key-0123456789ABC'
+        new_key = b'K' * 32
+        raw_token = b'rNeYnCghbVQEMQ7BCCKbjW2gd9d1Yzvczmkjs5btx5g='
+        pickle_token = b'5eyBM1b0WlPSLs5MoRPPMU5CsQyqHDMuRPvUmWkXnMb4BDp4nFjyDaY4+7Lo.RdM'
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', DeprecationWarning)
+            raw = Crypto.decrypt(old_key, raw_token)
+            record = Crypto.unserialize(old_key, pickle_token)
+            self.assertEqual(raw, b'archive\x00\xff')
+            self.assertEqual(record, {'count': 7})
+            self.assertEqual(Crypto.decrypt_authenticated(
+                new_key, Crypto.encrypt_authenticated(new_key, raw)), raw)
+            self.assertEqual(Crypto.unserialize_authenticated(
+                new_key, Crypto.serialize_authenticated(new_key, record)), record)
+
     def test_legacy_bytes_and_unicode_roundtrip(self):
         for data in (b'', b'hello\x00\xff', u'caf\u00e9'):
             encoded = Crypto.encrypt('a' * 32, data)
