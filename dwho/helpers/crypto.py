@@ -7,6 +7,7 @@ import binascii
 import io
 import json
 import pickle
+import warnings
 
 from six import binary_type, text_type, int2byte
 from Crypto import Random
@@ -67,6 +68,8 @@ class DWhoCryptoHelper(object):
     @classmethod
     def encrypt(cls, secret_key, data):
         """Legacy CBC format. Use encrypt_authenticated for new protocols."""
+        warnings.warn('Legacy CBC writes are deprecated. Use encrypt_authenticated for bytes '
+                      'or serialize_authenticated for JSON.', DeprecationWarning, stacklevel=2)
         iv = Random.get_random_bytes(AES.block_size)
         cipher = AES.new(cls._normalize_key(secret_key), AES.MODE_CBC, iv)
         return base64.b64encode(iv + cipher.encrypt(cls._pad(AES.block_size, data))).replace(b'/', b'.')
@@ -87,6 +90,7 @@ class DWhoCryptoHelper(object):
 
     @classmethod
     def serialize(cls, secret_key, data):
+        """Deprecated CBC/pickle writer for compatibility with older readers."""
         return cls.encrypt(secret_key, pickle.dumps(data, protocol=2))
 
     @classmethod
