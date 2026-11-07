@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
+          ref: df6eb5aed21d8cbf0d0bf46b8eefbba5f733f53f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -123,7 +123,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
+          ref: df6eb5aed21d8cbf0d0bf46b8eefbba5f733f53f
           path: dependencies/httpdis
           persist-credentials: false
       - name: Install and test with the legacy interpreter
@@ -147,7 +147,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
+          ref: df6eb5aed21d8cbf0d0bf46b8eefbba5f733f53f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -190,7 +190,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: decryptus/httpdis
-          ref: 87be5b4dfe6d10008825bd3b21ba8edfc149e58f
+          ref: df6eb5aed21d8cbf0d0bf46b8eefbba5f733f53f
           path: dependencies/httpdis
           persist-credentials: false
       - uses: actions/setup-python@v5
