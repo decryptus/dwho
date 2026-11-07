@@ -2,20 +2,20 @@ python-dwho (0.3.69) unstable; urgency=medium
 
   * Require HTTPdis 0.7.1 or later.
 
- -- Codex <codex@openai.com>  Sat, 07 Nov 2026 09:16:00 +0100
+ -- Adrien Delle Cave <pypi@doowan.net>  Sat, 07 Nov 2026 09:16:00 +0100
 
 python-dwho (0.3.68) unstable; urgency=medium
 
   * Enumerate matching Redis keys with incremental SCAN.
 
- -- Codex <codex@openai.com>  Sat, 07 Nov 2026 06:40:00 +0100
+ -- Adrien Delle Cave <pypi@doowan.net>  Sat, 07 Nov 2026 06:40:00 +0100
 
 python-dwho (0.3.67) unstable; urgency=medium
 
   * Deprecate CBC and CBC/pickle writes and document their authenticated replacements.
   * Verify migration using byte and pickle records produced by DWho 0.3.66.
 
- -- Codex <codex@openai.com>  Thu, 05 Nov 2026 00:00:00 +0000
+ -- Adrien Delle Cave <pypi@doowan.net>  Thu, 05 Nov 2026 00:00:00 +0000
 
 python-dwho (0.3.65) unstable; urgency=medium
 
@@ -23,7 +23,7 @@ python-dwho (0.3.65) unstable; urgency=medium
   * Preserve base CLI/curses imports and separate product operations from presentation.
   * Reconcile with all published 0.3.64 audit corrections.
 
- -- Codex <codex@openai.com>  Wed, 07 Oct 2026 02:00:00 +0200
+ -- Adrien Delle Cave <pypi@doowan.net>  Wed, 07 Oct 2026 02:00:00 +0200
 
 python-dwho (0.3.64) unstable; urgency=medium
 
@@ -32,7 +32,7 @@ python-dwho (0.3.64) unstable; urgency=medium
   * Clean up failed runtime startup while preserving the original error.
   * Escape literal SQL LIKE wildcards and cover audit regressions.
 
- -- Codex <codex@openai.com>  Tue, 06 Oct 2026 12:00:00 +0000
+ -- Adrien Delle Cave <pypi@doowan.net>  Tue, 06 Oct 2026 12:00:00 +0000
 
 python-dwho (0.3.64) unstable; urgency=medium
 
@@ -41,7 +41,7 @@ python-dwho (0.3.64) unstable; urgency=medium
   * Clean up failed runtime startup while preserving the original error.
   * Escape literal SQL LIKE wildcards and cover audit regressions.
 
- -- Codex <codex@openai.com>  Tue, 06 Oct 2026 12:00:00 +0000
+ -- Adrien Delle Cave <pypi@doowan.net>  Tue, 06 Oct 2026 12:00:00 +0000
 
 python-dwho (0.3.62) unstable; urgency=medium
 
@@ -50,7 +50,7 @@ python-dwho (0.3.62) unstable; urgency=medium
   * Isolate inotify command queues and plugin registries in new contexts.
   * Preserve legacy configuration overrides, extension hooks and exception identity.
 
- -- Codex <codex@openai.com>  Mon, 28 Sep 2026 01:40:00 +0200
+ -- Adrien Delle Cave <pypi@doowan.net>  Mon, 28 Sep 2026 01:40:00 +0200
 
 python-dwho (0.3.61) unstable; urgency=medium
 
@@ -60,7 +60,7 @@ python-dwho (0.3.61) unstable; urgency=medium
   * Preserve legacy callable behavior, Redis SET and older redis-py clients.
   * Cover notifier failures, Python compatibility, Redis and downstream consumers.
 
- -- Codex <codex@openai.com>  Tue, 22 Sep 2026 16:50:58 +0000
+ -- Adrien Delle Cave <pypi@doowan.net>  Tue, 22 Sep 2026 16:50:58 +0000
 
 python-dwho (0.3.59) unstable; urgency=medium
 
