@@ -25,7 +25,8 @@ class SessionBackend(object):
 
     Values are UTF-8 JSON strings, keys contain a namespace and token digest.
     create returns False on collision; read returns None for absent/expired keys.
-    touch MUST NOT recreate missing keys. Errors must propagate (fail closed).
+    touch MUST NOT recreate missing keys or shorten an existing TTL.
+    Errors must propagate (fail closed).
     Backends own their clock/expiry; callers own clients and connection lifecycle.
     """
     def create(self, key, value, ttl):

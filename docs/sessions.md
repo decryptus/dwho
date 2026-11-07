@@ -30,7 +30,8 @@ Use a stable unique namespace (letters, digits, underscore or dash, 1–64 chars
 maximum lifetime. TTL values are integer seconds, bounded to 366 days.
 
 Reads do not renew. Renewal atomically extends the idle TTL without exceeding
-the absolute lifetime. It cannot recreate a revoked/expired key. Revocation is
+the absolute lifetime. An older concurrent renewal cannot shorten a newer TTL.
+It cannot recreate a revoked/expired key. Revocation is
 per token/device; an already admitted request may finish. For account-wide
 revocation, check a credential version in your account store on every request.
 There is no device listing or bulk account revocation API in this module.
@@ -50,7 +51,8 @@ evicted. It is neither persistent nor shared between workers.
 
 To add a backend, implement `SessionBackend.create(key, value, ttl)`, `read(key)`,
 `touch(key, ttl)` and `delete(key)`. Creation must be atomic and conditional on
-absence; reads enforce expiry; touch must be atomic and never insert. Store
+absence; reads enforce expiry; touch must be atomic, never insert and never
+shorten an existing TTL. Store
 UTF-8 JSON values, return booleans from mutations and None for an absent read.
 Backend errors must propagate. Inject the adapter into `SessionManager`; no
 registry, HTTP import, configuration loader or global mutable state is required.

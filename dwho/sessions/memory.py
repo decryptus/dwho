@@ -48,7 +48,7 @@ class MemorySessionBackend(SessionBackend):
             value = self._read(key)
             if value is None:
                 return False
-            self._values[key] = (value[0], self.clock() + ttl)
+            self._values[key] = (value[0], max(value[1], self.clock() + ttl))
             return True
 
     def delete(self, key):

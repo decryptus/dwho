@@ -63,6 +63,8 @@ class RedisIntegrationTests(unittest.TestCase):
         self.assertTrue(0 < self.client.ttl(key) <= 30)
         self.assertFalse(backend.create(key, 'replacement', 30))
         self.assertIsNotNone(other.renew(grant.token))
+        self.assertTrue(backend.touch(key, 5))
+        self.assertGreater(self.client.ttl(key), 5)
         self.assertTrue(manager.revoke(grant.token))
         self.assertIsNone(other.read(grant.token))
         self.assertFalse(backend.touch(key, 30))

@@ -62,6 +62,14 @@ class SessionTests(unittest.TestCase):
         self.assertFalse(self.manager.revoke(first.token))
         self.assertIsNotNone(self.manager.read(second.token))
 
+    def test_stale_touch_cannot_shorten_a_newer_renewal(self):
+        grant = self.manager.create('alice')
+        key = self.manager._key(grant.token)
+        self.assertTrue(self.backend.touch(key, 20))
+        self.assertTrue(self.backend.touch(key, 5))
+        self.now[0] += 15
+        self.assertIsNotNone(self.manager.read(grant.token))
+
     def test_invalid_inputs_never_reach_storage(self):
         for token in (None, '', 'x' * 42, 'x' * 43 + '\n', 'a' * 10000):
             self.assertIsNone(self.manager.read(token))
