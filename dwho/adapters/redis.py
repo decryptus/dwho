@@ -11,6 +11,9 @@ from six.moves.urllib.parse import urlparse, parse_qs
 from redis import Redis
 
 
+SCAN_COUNT = 128
+
+
 class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
     def __init__(self, config, prefix = None, load = True):
         self.config  = config
@@ -227,7 +230,19 @@ class DWhoAdapterRedis(object): # pylint: disable=useless-object-inheritance
 
         for name, server in iteritems(servers):
             if not prefix or name.startswith(prefix):
-                r[name] = server['conn'].keys(pattern)
+                cursor = 0
+                found = set()
+                keys = []
+                while True:
+                    cursor, batch = server['conn'].execute_command(
+                        'SCAN', cursor, 'MATCH', pattern, 'COUNT', SCAN_COUNT)
+                    for key in batch:
+                        if key not in found:
+                            keys.append(key)
+                            found.add(key)
+                    if int(cursor) == 0:
+                        break
+                r[name] = keys
 
         return r
 

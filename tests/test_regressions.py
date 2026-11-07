@@ -15,6 +15,17 @@ from dwho.classes import inotify, notifiers
 from dwho.classes.abstract import DWhoAbstractDB
 
 class RedisTests(unittest.TestCase):
+    def test_keys_scans_empty_pages_and_removes_duplicates(self):
+        adapter = redis.DWhoAdapterRedis({}, load=False)
+        first, other = mock.Mock(), mock.Mock()
+        adapter.servers = {'cache-a': {'conn': first}, 'other': {'conn': other}}
+        first.execute_command.side_effect = [(b'2', []), (3, [b'ax']), (0, [b'ax', b'ay'])]
+        self.assertEqual(adapter.keys('a*', prefix='cache'), {'cache-a': [b'ax', b'ay']})
+        self.assertEqual(first.execute_command.call_args_list, [
+            mock.call('SCAN', cursor, 'MATCH', 'a*', 'COUNT', redis.SCAN_COUNT)
+            for cursor in (0, b'2', 3)])
+        self.assertFalse(other.execute_command.called)
+
     def test_multiple_servers_and_reconnection(self):
         config = {'general': {'redis': {'first': {'url': 'redis://localhost/0'},
                                        'second': {'url': 'redis://localhost/1'}}}}
