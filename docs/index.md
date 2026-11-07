@@ -13,6 +13,7 @@ Installation, configuration, public APIs and troubleshooting.
    release-0.3.64
    audit-compatibility
    runtime-contexts
+   sessions
    terminal
    textual
    configuration-validation

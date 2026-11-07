@@ -9,6 +9,8 @@ from redis import Redis
 from redis.exceptions import ResponseError
 
 from dwho.classes.notifiers import DWhoNotifierRedis
+from dwho.sessions import SessionManager
+from dwho.sessions.redis import RedisSessionBackend
 
 
 @unittest.skipUnless(os.environ.get('DWHO_REDIS_TEST_URL'), 'requires disposable Redis')
@@ -47,6 +49,32 @@ class RedisIntegrationTests(unittest.TestCase):
         with self.assertRaises(ResponseError):
             self.notifier.send('test', self.cfg, {'key': self.key, 'value': 'event'})
         self.assertEqual(self.client.get(self.key), b'existing')
+
+    def test_sessions_share_expire_and_revoke_without_resurrection(self):
+        namespace = 'session-test-' + uuid.uuid4().hex
+        backend = RedisSessionBackend(self.client)
+        manager = SessionManager(backend, namespace, 30, 60)
+        other = SessionManager(RedisSessionBackend(self.client), namespace, 30, 60)
+        grant = manager.create('alice', {'version': 1})
+        key = manager._key(grant.token)
+        self.addCleanup(self.client.delete, key)
+        self.assertEqual(other.read(grant.token).subject, 'alice')
+        self.assertNotIn(grant.token.encode('ascii'), self.client.get(key))
+        self.assertTrue(0 < self.client.ttl(key) <= 30)
+        self.assertFalse(backend.create(key, 'replacement', 30))
+        self.assertIsNotNone(other.renew(grant.token))
+        self.assertTrue(manager.revoke(grant.token))
+        self.assertIsNone(other.read(grant.token))
+        self.assertFalse(backend.touch(key, 30))
+        self.assertEqual(self.client.exists(key), 0)
+
+    def test_session_backend_expiry_is_enforced(self):
+        import time
+        backend = RedisSessionBackend(self.client)
+        self.assertTrue(backend.create(self.key, 'record', 1))
+        time.sleep(1.1)
+        self.assertIsNone(backend.read(self.key))
+        self.assertFalse(backend.touch(self.key, 10))
 
 
 if __name__ == '__main__':

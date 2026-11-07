@@ -20,6 +20,12 @@ Only UUID-prefixed test keys are created/deleted; the database is never flushed.
 No production service is contacted. See `.github/workflows/tests.yml` for the
 compatibility matrix and `.github/workflows/pypi.yml` for release gates.
 
+Session contracts are covered by `tests/test_sessions.py`; the existing Redis
+integration discovery also covers actual expiry, conditional creation and
+cross-manager revocation. Session code must stay independent of HTTP and account
+models. This additive development change does not bump a published package;
+consumers needing it before the next release must pin the reviewed commit.
+
 To release, update `VERSION`, `RELEASE` and both version fields in `setup.yml`
 together, then merge the tested PR. The publication workflow validates the package,
 creates `vX.Y.Z` on master and publishes the same artifacts using PyPI Trusted
