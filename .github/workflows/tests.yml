@@ -132,7 +132,8 @@ jobs:
           python:${{ matrix.python }}
           bash /src/.github/scripts/test-legacy.sh
   consumers:
-    runs-on: ubuntu-latest
+    # Legacy pyjq embeds C code that does not build with Ubuntu 26.04 GCC.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
