@@ -1,7 +1,7 @@
 escapejson
 httpdis>=0.7.1
 Mako
-PyYAML>=3.10
+PyYAML>=6.0.3
 pyinotify
 pyasyncore>=1.0.2; python_version >= '3.12'
 pycryptodome>=3.9
