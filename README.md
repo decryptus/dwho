@@ -247,8 +247,9 @@ presentation modules and the CertLord service integration example.
 
 For modern dashboards, the optional [Textual components](docs/textual.md)
 provide navigation, searchable tables, details and confirmation dialogs on
-Python 3.9+. This feature is currently available from the candidate checkout;
-it does not replace existing CLI or curses interfaces.
+Python 3.9+. Install them with `python -m pip install 'dwho[textual]'`
+(available since 0.3.65; product palettes require 0.3.66+); they do not replace
+existing CLI or curses interfaces.
 
 See [configuration validation](docs/configuration-validation.md) for YAML schema
 coverage and compatibility.
